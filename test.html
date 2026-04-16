@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Chemotaxis</title>
+<style type="text/css">
+body{
+		font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue",
+		 Helvetica, Arial, "Lucida Grande", sans-serif;
+	 padding : 15px;
+	 max-width: 600px;
+	 margin: auto;
+}
+td {
+	 padding: 10px;
+	 vertical-align: top;
+}
+</style>
+
+
+<script src="./artistoo-master/build/artistoo.js"></script>
+<script>
+"use strict"
+
+
+/*	----------------------------------
+	CONFIGURATION SETTINGS
+	----------------------------------
+*/
+
+let config = {
+
+	// Grid settings
+	ndim : 2,
+	field_size : [100,100],
+	
+	// CPM parameters and configuration
+	conf : {
+		// Basic CPM parameters
+		torus : [false,false],						// Should the grid have linked borders?
+		seed : 1,							// Seed for random number generation.
+		T : 20,								// CPM temperature
+		D : 0.05,
+		
+		// Constraint parameters. 
+		// Mostly these have the format of an array in which each element specifies the
+		// parameter value for one of the cellkinds on the grid.
+		// First value is always cellkind 0 (the background) and is often not used.
+
+		
+		// Adhesion parameters:
+		J: [[0,20], [20,100]],
+		
+		// VolumeConstraint parameters
+		LAMBDA_V : [0,50],					// VolumeConstraint importance per cellkind
+		V : [0,50]						// Target volume of each cellkind
+		
+	},
+	
+	// Simulation setup and configuration: this controls stuff like grid initialization,
+	// runtime, and what the output should look like.
+	simsettings : {
+	
+		// Cells on the grid
+		NRCELLS : [3,0],					// Number of cells to seed for all
+		// non-background cellkinds.
+		// Runtime etc
+		BURNIN : 500,
+		RUNTIME : 1000,
+		RUNTIME_BROWSER : "Inf",
+		
+		// Visualization
+		zoom : 1,							// zoom in on canvas with this factor.
+		
+		// Output images
+		SAVEIMG : true,						// Should a png image of the grid be saved
+		// during the simulation?
+		IMGFRAMERATE : 1,					// If so, do this every <IMGFRAMERATE> MCS.
+		SAVEPATH : "output/img/Chemotaxis",	// ... And save the image in this folder.
+		EXPNAME : "Chemotaxis",					// Used for the filename of output images.
+		
+		// Output stats etc
+		STATSOUT : { browser: false, node: true }, // Should stats be computed?
+		LOGRATE : 10							// Output stats every <LOGRATE> MCS.
+
+	}
+}
+/*	---------------------------------- */
+let sim
+
+
+function initialize(){
+	 /* 	The following functions are defined below and will be added to
+	 	the simulation object. If Custom-methods above is set to false,
+	 	this object is ignored and not used in the html/node files. */
+	 let custommethods = {
+	 	initializeGrid : initializeGrid,
+	 	postMCSListener : postMCSListener,
+	 	drawCanvas : drawCanvas
+	 }
+	sim = new CPM.Simulation( config, custommethods )
+	console.log(config.conf.torus)
+sim.g = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.conf.torus, "Float32"),
+sim.g.diffusion = diffusion
+sim.g.neighNeumanni = neighNeumanni
+
+sim.C.add( new CPM.ChemotaxisConstraint( {
+	LAMBDA_CH: [0,5000],
+	CH_FIELD : sim.g }
+) )
+
+	// console.log(sim.g.i2p(256250), sim.g.i2p(256250) in sim.C.getConstraint("BorderConstraint").barriervoxels, sim.g.pixt(sim.g.p2i([500,500])), sim.g.pixt(sim.g.p2i([500,500])) in sim.C.getConstraint("BorderConstraint").barriervoxels, sim.C.getConstraint("BorderConstraint").barriervoxels)
+	console.log(sim.g.p2i([100,100]), sim.g.p2i([50,50]))
+	console.log(sim.C.pixt([50,50]))
+	console.log(sim.C.getConstraint("BorderConstraint").barriervoxels[sim.g.p2i(50,50)],
+	sim.C.getConstraint("BorderConstraint").barriervoxels[sim.g.p2i(100,100)]
+	)
+
+	// Manual BugFix
+	let dH = function( sourcei, targeti, src_type, tgt_type ){
+		let delta = this.field.pixti( targeti ) - this.field.pixti( sourcei ) 
+		let lambdachem = this.cellParameter( "LAMBDA_CH", src_type )
+			return -delta*lambdachem
+	}
+	sim.C.getConstraint("ChemotaxisConstraint").deltaH = dH
+	// End Manuel BugFix
+	console.log(sim.g.extents)
+    step()
+}
+
+
+function step(){
+	sim.step()
+	if( sim.conf["RUNTIME_BROWSER"] == "Inf" | sim.time+1 < sim.conf["RUNTIME_BROWSER"] ){
+		requestAnimationFrame( step )
+	}
+}
+
+
+
+/* The following custom methods will be added to the simulation object*/
+function initializeGrid(){
+	
+	// add the initializer if not already there
+	if( !this.helpClasses["gm"] ){ this.addGridManipulator() }
+	
+
+    this.walls = getWallPixels({x: 30, y: 0}, {x: 33, y: 100})
+
+    this.c = new CPM.BorderConstraint({
+		BARRIER_VOXELS: this.walls
+	})
+	this.C.add(this.c)
+
+	for( let i = 0 ; i < Math.PI*2 ; i += 0.4 ){
+		this.gm.seedCellAt( 1, 
+			[Math.round(this.C.extents[0]/2+this.C.extents[0]/3*Math.sin(i)),
+				Math.round(this.C.extents[1]/2+this.C.extents[1]/3*Math.cos(i))] )
+	}
+}
+function postMCSListener(){
+	let center = [this.C.extents[0]/2+20,this.C.extents[1]/2+20]
+	this.g.setpix( center, 10000+this.g.pixt(center) )
+	for( let i = 1 ; i <= 10 ; i ++ ){
+		this.g.diffusion( this.C.conf["D"] )
+	}
+
+	// this.g.multiplyBy( 0.9 )
+}
+
+function drawCanvas(){
+	
+	// Add the canvas if required
+	if( !this.helpClasses["canvas"] ){ this.addCanvas() }
+	this.Cim.drawField( this.g )
+	this.Cim.drawCellBorders( -1, "000000" )
+
+    this.Cim.drawPixelSet(this.walls, "AAAAAA");
+}
+
+function inOrder(p1, p2) {
+	return {
+		smallestX: p1.x < p2.x ? p1.x : p2.x,
+		largestX: p1.x >= p2.x ? p1.x : p2.x,
+		smallestY: p1.y < p2.y ? p1.y : p2.y,
+		largestY: p1.y >= p2.y ? p1.y : p2.y
+	}
+}
+
+
+function getWallPixels(p1, p2) {
+	let sorted = inOrder(p1, p2) 
+
+	let wallPixels = []
+	for (let x = sorted.smallestX; x < sorted.largestX; x++) {
+		for (let y = sorted.smallestY; y < sorted.largestY; y++) {
+			wallPixels.push([x, y])
+		}
+	}
+	return wallPixels
+}
+
+
+
+// function laplaciani( i ){
+//     let L = 0, n = 0;
+
+//     //noinspection JSUnresolvedFunction
+//     for( let x of this.neighNeumanni(i) ){
+//         L += this.pixti( x ); n ++;
+//     } 
+//     return L - n * this.pixti( i );
+// }
+
+/** Perform a diffusion step on the grid, updating the values of all pixels
+ * according to Fick's second law of diffusion.
+ * @param {number} D diffusion coefficient
+ * @see https://en.wikipedia.org/wiki/Diffusion#Fick's_law_and_equations
+ * @see https://en.wikipedia.org/wiki/Discrete_Laplace_operator#Mesh_Laplacians
+ * */
+function diffusion( D ) {
+    // For synchronous updating of the grid: compute updated values in a copy
+    // of the current pixels
+    if( ! this._pixelsbuffer ) this.pixelsBuffer();
+    for( let i of this.pixelsi() ){
+		// console.log(i, this.pixti(i))
+		if (i in sim.C.getConstraint("BorderConstraint").barriervoxels) continue;
+        // Diffusion: new value is current value + change.
+        // the change is given by the diffusion coefficient D times the laplacian.
+        this._pixelsbuffer[i] = this.pixti( i ) + D * this.laplaciani( i );
+    }
+    // swap the copy and the original
+    [this._pixelsbuffer, this._pixels] = [this._pixels, this._pixelsbuffer];
+}
+
+
+function* neighNeumanni( i, torus = this.torus ){
+    // normal computation of neighbor indices (top left-middle-right, 
+    // left, right, bottom left-middle-right)
+    let t = i-1, l = i-this.X_STEP, r = i+this.X_STEP, b = i+1;
+    
+	function isBorder(j) {
+		// console.log(j, j in sim.C.getConstraint("BorderConstraint").barriervoxels)
+		return j in sim.C.getConstraint("BorderConstraint").barriervoxels
+	}
+    // if pixel is part of one of the borders, adjust the 
+    // indices accordingly
+    // if torus is false, return NaN for all neighbors that cross
+    // the border.
+
+    // left border
+    if( i < this.extents[1]){
+        if( torus[0] ){
+            l += this.extents[0] * this.X_STEP;
+            yield isBorder(l) ? i : l;
+        } else {
+			yield i
+		}
+    } else {
+        yield isBorder(l) ? i : l;
+    }
+    // right border
+    if( i >= this.X_STEP*( this.extents[0] - 1 ) ){
+        if( torus[0] ){
+            r -= this.extents[0] * this.X_STEP;
+            yield isBorder(r) ? i : r;
+        } else {
+			yield i
+		}		
+    } else {
+        yield isBorder(r) ? i : r;
+    }
+    // top border
+    if( i % this.X_STEP === 0 ){
+        if( torus[1] ){
+            t += this.extents[1];
+            yield isBorder(t) ? i : t;
+        } else {
+			yield i
+		}
+    } else {
+        yield isBorder(t) ? i : t;
+    }
+    // bottom border
+    if( (i+1-this.extents[1]) % this.X_STEP === 0 ){
+        if( torus[1] ){
+            b -= this.extents[1];
+            yield isBorder(b) ? i : b;
+        } else {
+			yield i
+		}
+    } else {
+        yield isBorder(b) ? i : b;
+    }
+}
+
+</script>
+</head>
+<body onload="initialize()">
+ 
+ <h1>Chemotaxis</h1>
+ <p>
+  Cells moving up a gradient of a diffusing chemokine, which is produced in the center. </p>
+</body>
+</html>
