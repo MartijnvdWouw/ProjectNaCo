@@ -1,0 +1,150 @@
+<!-- Page setup and title -->
+<!DOCTYPE html>
+<html lang="en">
+<head><meta http-equiv="Content-Type" content="text/html;
+charset=UTF-8">
+<title>Maze</title>
+<style type="text/css"> 
+body{
+    font-family: "HelveticaNeue-Light", sans-serif; padding : 15px;
+}
+</style>
+
+<!-- Sourcing the cpm build -->
+<script src="./artistoo-master/build/artistoo.js"></script>
+<script>
+"use strict"
+
+let GRID_WIDTH = 170
+let GRID_HEIGHT = 170
+
+let config = {
+	// Grid settings
+	ndim : 2,
+	field_size : [GRID_WIDTH,GRID_HEIGHT],
+	
+	// CPM parameters and configuration
+	conf : {
+		T : 20,			// CPM temperature
+				
+		// Adhesion parameters:
+		J: [[0,20], [20,100]] ,
+		
+		// VolumeConstraint parameters
+		LAMBDA_V : [0,50],	// VolumeConstraint importance per cellkind
+		V : [0,500]		// Target volume of each cellkind
+	},
+	
+	// Simulation setup and configuration
+	simsettings : {
+		// Cells on the grid
+		NRCELLS : [0],		// Number of cells to seed for all
+							// non-background cellkinds.
+		CANVASCOLOR : "eaecef",
+		zoom : 4,		// zoom in on canvas with this factor.
+		torus: [false, false]
+	}
+}
+
+// Initialize simulation for html
+let sim
+
+function initialize(){
+	let custommethods = {
+		initializeGrid : initializeGrid,
+		drawBelow: drawBelow
+	}
+
+    sim = new CPM.Simulation( config, custommethods )
+    step()
+}
+
+function step(){
+    sim.step()
+    requestAnimationFrame( step )
+}
+
+function initializeGrid() {
+	if (!this.helpClasses['gm']) {
+		this.addGridManipulator();
+	}
+
+	this.walls = createMediumMaze()
+
+	this.C.add(new CPM.BorderConstraint({
+		BARRIER_VOXELS: this.walls
+	}))
+}
+
+// Grid size: 528x100
+function createEasyMaze() {
+	let wallPixels = []
+
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 31}, {x: 213, y: 31}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 65}, {x: 213, y: 65}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 213, y: 0}, {x: 213, y: 30}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 213, y: 66}, {x: 213, y: 99}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 249, y: 32}, {x: 249, y: 64}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 249, y: 31}, {x: 527, y: 31}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 249, y: 65}, {x: 527, y: 65}))
+
+	return wallPixels
+}
+
+// Grid size: 170x170
+function createMediumMaze() {
+	let wallPixels = []
+
+	wallPixels = wallPixels.concat(getWallPixels({x: 33, y: 0}, {x: 33, y: 33}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 33, y: 67}, {x: 33, y: 135}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 67, y: 67}, {x: 67, y: 101}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 101, y: 33}, {x: 101, y: 101}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 101, y: 135}, {x: 101, y: 169}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 135, y: 67}, {x: 135, y: 101}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 33, y: 33}, {x: 101, y: 33}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 135, y: 33}, {x: 169, y: 33}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 33, y: 101}, {x: 67, y: 101}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 135, y: 101}, {x: 169, y: 101}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 135}, {x: 33, y: 135}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 67, y: 135}, {x: 135, y: 135}))
+
+	return wallPixels
+}
+
+// Expects two {x : Int, y: Int}, returns an array with pixels
+function getWallPixels(p1, p2) {
+	let sorted = inOrder(p1, p2)
+
+	let wallPixels = []
+	for (let x = sorted.smallestX; x <= sorted.largestX; x++) {
+		for (let y = sorted.smallestY; y <= sorted.largestY; y++) {
+			wallPixels.push([x, y])
+		}
+	}
+	return wallPixels
+}
+
+// Expects two {x : Int, y: Int}, returns {smallestX: Int, largestX: Int, smallestY: Int, largestY: Int}
+function inOrder(p1, p2) {
+	return {
+		smallestX: p1.x < p2.x ? p1.x : p2.x,
+		largestX: p1.x >= p2.x ? p1.x : p2.x,
+		smallestY: p1.y < p2.y ? p1.y : p2.y,
+		largestY: p1.y >= p2.y ? p1.y : p2.y
+	}
+}
+
+// Draws the pixels in BARRIER_VOXELS
+function drawBelow() {
+	this.Cim.drawPixelSet(this.walls, "AAAAAA");
+}
+
+</script>
+</head>
+<body onload="initialize()">
+	<h1>Maze</h1>
+	<p>
+		A maze in CPM
+	</p>
+</body>
+</html>
