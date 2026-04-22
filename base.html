@@ -16,10 +16,13 @@ td {
 </style>
 
 
-<script src="./artistoo.js"></script>
-<script src="./fpsmeter.min.js"></script>
+<script src="./artistoo-master/examples/html/artistoo.js"></script>
+<script src="./artistoo-master/examples/html/fpsmeter.min.js"></script>
 <script>
 "use strict"
+
+let singlePrint = true;
+let amount = 1000
 
 
 /*	----------------------------------
@@ -31,7 +34,7 @@ let config = {
 
 	// Grid settings
 	ndim : 2,
-	field_size : [600,600],
+	field_size : [200,200],
 	
 	// CPM parameters and configuration
 	conf : {
@@ -51,7 +54,7 @@ let config = {
 		J: [[0,20], [20,100]],
 		
 		// VolumeConstraint parameters
-		LAMBDA_V : [0,1],					// VolumeConstraint importance per cellkind
+		LAMBDA_V : [0,50],					// VolumeConstraint importance per cellkind
 		V : [0,250]						// Target volume of each cellkind
 		
 	},
@@ -64,12 +67,12 @@ let config = {
 		NRCELLS : [3,0],					// Number of cells to seed for all
 		// non-background cellkinds.
 		// Runtime etc
-		BURNIN : 0,
+		BURNIN : 500,
 		RUNTIME : 1000,
 		RUNTIME_BROWSER : "Inf",
 		
 		// Visualization
-		zoom : 1,							// zoom in on canvas with this factor.
+		zoom : 4,							// zoom in on canvas with this factor.
 		
 		// Output images
 		SAVEIMG : true,						// Should a png image of the grid be saved
@@ -98,25 +101,23 @@ function initialize(){
 	 	drawCanvas : drawCanvas
 	 }
 	sim = new CPM.Simulation( config, custommethods )
-sim.g = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.torus, "Float32"),
-//sim.gi = new CPM.CoarseGrid( sim.g, 10 ),
+  sim.g = new CPM.Grid2D(sim.C.extents, config.torus, "Float32"),
 
-sim.C.add( new CPM.ChemotaxisConstraint( {
-	LAMBDA_CH: [0,1],
-	CH_FIELD : sim.g }
-) )
+  sim.C.add( new CPM.ChemotaxisConstraint( {
+    LAMBDA_CH: [0,100],
+    CH_FIELD : sim.g }
+  ) )
 
-let dH = function( sourcei, targeti, src_type, tgt_type ){
-  let delta = this.field.pixti( targeti ) - this.field.pixti( sourcei ) 
-  let lambdachem = this.cellParameter( "LAMBDA_CH", src_type )
-  return -delta*lambdachem
-}
-
-sim.C.getConstraint("ChemotaxisConstraint").deltaH = dH
-
+  // Manual BugFix
+  let dH = function( sourcei, targeti, src_type, tgt_type ){
+    let delta = this.field.pixti( targeti ) - this.field.pixti( sourcei ) 
+    let lambdachem = this.cellParameter( "LAMBDA_CH", src_type )
+    return -delta*lambdachem
+  }
+  sim.C.getConstraint("ChemotaxisConstraint").deltaH = dH
+  // End Manuel BugFix
 
 	meter = new FPSMeter({left:"auto", right:"5px"})
-  sim.running = true
 	step()
 }
 
@@ -124,8 +125,9 @@ sim.C.getConstraint("ChemotaxisConstraint").deltaH = dH
 function step(){
 	sim.step()
 	meter.tick()
-  requestAnimationFrame( step )
-	
+	if( sim.conf["RUNTIME_BROWSER"] == "Inf" | sim.time+1 < sim.conf["RUNTIME_BROWSER"] ){
+		requestAnimationFrame( step )
+	}
 }
 
 
@@ -136,19 +138,42 @@ function initializeGrid(){
 	// add the initializer if not already there
 	if( !this.helpClasses["gm"] ){ this.addGridManipulator() }
 	
-	for( let i = 0 ; i < Math.PI*2 ; i += 0.4 ){
-		this.gm.seedCellAt( 1, 
-			[Math.round(this.C.extents[0]/2+this.C.extents[0]/3*Math.sin(i)),
-				Math.round(this.C.extents[1]/2+this.C.extents[1]/3*Math.cos(i))] )
-	}
+	// for( let i = 0 ; i < Math.PI*2 ; i += 0.4 ){
+	// 	this.gm.seedCellAt( 1, 
+	// 		[Math.round(this.C.extents[0]/2+this.C.extents[0]/3*Math.sin(i)),
+	// 			Math.round(this.C.extents[1]/2+this.C.extents[1]/3*Math.cos(i))] )
+	// }
+
+  //this.gm.seedCellAt(1, [Math.round(this.C.extents[0]/4),Math.round(this.C.extents[1]/4)])
+  this.gm.seedCellAt(1, [75, 75])
 }
 function postMCSListener(){
 	let center = [this.C.extents[0]/2,this.C.extents[1]/2]
 	this.g.setpix( center, 10000+this.g.pixt(center) )
-	for( let i = 1 ; i <= 1 ; i ++ ){
+	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
 	}
-	this.g.multiplyBy( 1 )
+	this.g.multiplyBy( 0.95 )
+
+  //Ignore
+  if (singlePrint){
+    console.log(this.gm)
+    console.log("\n\n\n")
+    console.log(this.g)
+    singlePrint = false;
+    console.log(sim.C.pixt([75,75]))
+    console.log(sim.C.pixt([0,0]))
+  }
+  
+  // This is were he eats
+  for (let i = 0; i <= this.C.extents[0]; i++){
+    for (let j = 0; j <= this.C.extents[1]; j++){
+      if (sim.C.pixt([i,j]) == 1){
+        this.g.setpix([i,j], 0)
+      }
+    }
+  }
+
 }
 
 function drawCanvas(){
