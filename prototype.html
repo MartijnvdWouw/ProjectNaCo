@@ -81,7 +81,8 @@ let config = {
 }
 
 // Initialize simulation for html
-let sim, meter, bc
+let sim, meter, borderConstraint
+const neighbourObject = {}
 
 function initialize(){
 	let custommethods = {
@@ -92,7 +93,9 @@ function initialize(){
 	}
 
     sim = new CPM.Simulation( config, custommethods )
-    sim.g = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.torus, "Float32"),
+    sim.g = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.conf.torus, "Float32")
+    borderConstraint = sim.C.getConstraint("BorderConstraint")
+    initializeNeighbourObject(sim.g)
     sim.g.diffusion = diffusion
     sim.g.neighNeumanni = neighNeumanni
 
@@ -115,9 +118,6 @@ function initialize(){
         return -delta*lambdachem
     }
     sim.C.getConstraint("ChemotaxisConstraint").deltaH = dH
-    bc = sim.C.getConstraint("BorderConstraint")
-
-    // console.log(sim.C.getConstraint("BorderConstraint").barriervoxels)
     // End Manuel BugFix
 
 	meter = new FPSMeter({left:"auto", right:"5px"})
@@ -158,7 +158,6 @@ function postMCSListener(){
 }
 
 function removeChemokines(obj) {
-    // TODO: CAN THIS BE OPTIMIZED?
     // This is were he eats
     for (let i = 0; i <= obj.C.extents[0]; i++){
         for (let j = 0; j <= obj.C.extents[1]; j++){
@@ -241,20 +240,86 @@ function inOrder(p1, p2) {
 	}
 }
 
+function initializeNeighbourObject(obj){
+    if( ! obj._pixelsbuffer ) obj.pixelsBuffer();
+    for( let i of obj.pixelsi() ){
+		if (borderConstraint.barriervoxels[i]) neighbourObject[i] = [];
+        neighbourObject[i] = neighboursi(obj, i, obj.torus)
+    }
+}
+
+function neighboursi( obj, i, torus ){
+    // normal computation of neighbor indices (top left-middle-right, 
+    // left, right, bottom left-middle-right)
+    let t = i-1, l = i-obj.X_STEP, r = i+obj.X_STEP, b = i+1;
+    
+	function isBorder(j) {
+		return borderConstraint.barriervoxels[j]
+	}
+
+    let result = []
+
+    // left border
+    if( i < obj.extents[1]){
+        if( torus[0] ){
+            l += obj.extents[0] * obj.X_STEP;
+            result.push(isBorder(l) ? i : l)
+        } else {
+			result.push(i)
+		}
+    } else {
+        result.push(isBorder(l) ? i : l)
+    }
+    // right border
+    if( i >= obj.X_STEP*( obj.extents[0] - 1 ) ){
+        if( torus[0] ){
+            r -= obj.extents[0] * obj.X_STEP;
+            result.push(isBorder(r) ? i : r)
+        } else {
+			result.push(i)
+		}		
+    } else {
+        result.push(isBorder(r) ? i : r)
+    }
+    // top border
+    if( i % obj.X_STEP === 0 ){
+        if( torus[1] ){
+            t += obj.extents[1];
+            result.push(isBorder(t) ? i : t)
+        } else {
+			result.push(i)
+		}
+    } else {
+        result.push(isBorder(t) ? i : t)
+    }
+    // bottom border
+    if( (i+1-obj.extents[1]) % obj.X_STEP === 0 ){
+        if( torus[1] ){
+            b -= obj.extents[1];
+            result.push(isBorder(b) ? i : b)
+        } else {
+			result.push(i)
+		}
+    } else {
+        result.push(isBorder(b) ? i : b)
+    }
+
+    return result
+}
+
+
 /** Perform a diffusion step on the grid, updating the values of all pixels
  * according to Fick's second law of diffusion.
  * @param {number} D diffusion coefficient
  * @see https://en.wikipedia.org/wiki/Diffusion#Fick's_law_and_equations
  * @see https://en.wikipedia.org/wiki/Discrete_Laplace_operator#Mesh_Laplacians
  * */
-// TODO: OPTIMISE
 function diffusion( D ) {
     // For synchronous updating of the grid: compute updated values in a copy
     // of the current pixels
     if( ! this._pixelsbuffer ) this.pixelsBuffer();
     for( let i of this.pixelsi() ){
-		// console.log(i, this.pixti(i))
-		if (bc.barriervoxels[i]) continue;
+        if (borderConstraint.barriervoxels[i]) continue;
         // Diffusion: new value is current value + change.
         // the change is given by the diffusion coefficient D times the laplacian.
         this._pixelsbuffer[i] = this.pixti( i ) + D * this.laplaciani( i );
@@ -263,65 +328,9 @@ function diffusion( D ) {
     [this._pixelsbuffer, this._pixels] = [this._pixels, this._pixelsbuffer];
 }
 
-// TODO: OPTIMISE
-function* neighNeumanni( i, torus = this.torus ){
-    // normal computation of neighbor indices (top left-middle-right, 
-    // left, right, bottom left-middle-right)
-    let t = i-1, l = i-this.X_STEP, r = i+this.X_STEP, b = i+1;
-    
-	function isBorder(j) {
-		// console.log(j, j in sim.C.getConstraint("BorderConstraint").barriervoxels)
-		return bc.barriervoxels[j]
-	}
-    // if pixel is part of one of the borders, adjust the 
-    // indices accordingly
-    // if torus is false, return NaN for all neighbors that cross
-    // the border.
-
-    // left border
-    if( i < this.extents[1]){
-        if( torus[0] ){
-            l += this.extents[0] * this.X_STEP;
-            yield isBorder(l) ? i : l;
-        } else {
-			yield i
-		}
-    } else {
-        yield isBorder(l) ? i : l;
-    }
-    // right border
-    if( i >= this.X_STEP*( this.extents[0] - 1 ) ){
-        if( torus[0] ){
-            r -= this.extents[0] * this.X_STEP;
-            yield isBorder(r) ? i : r;
-        } else {
-			yield i
-		}		
-    } else {
-        yield isBorder(r) ? i : r;
-    }
-    // top border
-    if( i % this.X_STEP === 0 ){
-        if( torus[1] ){
-            t += this.extents[1];
-            yield isBorder(t) ? i : t;
-        } else {
-			yield i
-		}
-    } else {
-        yield isBorder(t) ? i : t;
-    }
-    // bottom border
-    if( (i+1-this.extents[1]) % this.X_STEP === 0 ){
-        if( torus[1] ){
-            b -= this.extents[1];
-            yield isBorder(b) ? i : b;
-        } else {
-			yield i
-		}
-    } else {
-        yield isBorder(b) ? i : b;
-    }
+// do not remove unused torus param!
+function neighNeumanni( i, torus ){
+    return neighbourObject[i]
 }
 
 </script>
