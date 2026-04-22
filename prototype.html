@@ -27,6 +27,9 @@ td {
 let GRID_WIDTH = 170
 let GRID_HEIGHT = 170
 
+let RUPSJENOOITGENOEG = 0.95
+let INIT_CHEMOKINE = 10
+
 let config = {
 	// Grid settings
 	ndim : 2,
@@ -37,21 +40,23 @@ let config = {
         torus: [false, false],
         seed: 1,
         D: 0.1,
-        T : 20,			// CPM temperature
+        T : 20,											// CPM temperature
 				
 		// Adhesion parameters:
-		J: [[0,20], [20,100]] ,
+		J: [[0,20], [20,0]] ,
 		
 		// VolumeConstraint parameters
-		LAMBDA_V : [0,50],	// VolumeConstraint importance per cellkind
-		V : [0,250]		// Target volume of each cellkind
+		LAMBDA_V : [0,50],								// VolumeConstraint importance per cellkind
+		V : [0,100],									// Target volume of each cellkind
+
+		LAMBDA_P: [0,2],								// PerimeterConstraint importance per cellkind
+		P : [0,35],										// Target perimeter of each cellkind
 	},
 	
 	// Simulation setup and configuration
 	simsettings : {
-	
 		// Cells on the grid
-		NRCELLS : [3,0],					// Number of cells to seed for all
+		NRCELLS : [3,0],								// Number of cells to seed for all
 		// non-background cellkinds.
 		// Runtime etc
 		BURNIN : 500,
@@ -59,24 +64,24 @@ let config = {
 		RUNTIME_BROWSER : "Inf",
 		
 		// Visualization
-		zoom : 4,							// zoom in on canvas with this factor.
+		zoom : 4,										// zoom in on canvas with this factor.
 		
 		// Output images
-		SAVEIMG : true,						// Should a png image of the grid be saved
+		SAVEIMG : true,									// Should a png image of the grid be saved
 		// during the simulation?
-		IMGFRAMERATE : 1,					// If so, do this every <IMGFRAMERATE> MCS.
-		SAVEPATH : "output/img/Chemotaxis",	// ... And save the image in this folder.
-		EXPNAME : "Chemotaxis",					// Used for the filename of output images.
+		IMGFRAMERATE : 1,								// If so, do this every <IMGFRAMERATE> MCS.
+		SAVEPATH : "output/img/Chemotaxis",				// ... And save the image in this folder.
+		EXPNAME : "Chemotaxis",							// Used for the filename of output images.
 		
 		// Output stats etc
-		STATSOUT : { browser: false, node: true }, // Should stats be computed?
-		LOGRATE : 10							// Output stats every <LOGRATE> MCS.
+		STATSOUT : { browser: false, node: true }, 		// Should stats be computed?
+		LOGRATE : 10									// Output stats every <LOGRATE> MCS.
 
 	}
 }
 
 // Initialize simulation for html
-let sim, meter
+let sim, meter, bc
 
 function initialize(){
 	let custommethods = {
@@ -91,6 +96,13 @@ function initialize(){
     sim.g.diffusion = diffusion
     sim.g.neighNeumanni = neighNeumanni
 
+	// Initial chemokine value for all cells in grid
+	for (let x = 0; x < GRID_WIDTH; x++) {
+		for (let y = 0; y < GRID_HEIGHT; y++) {
+			sim.g.setpix([x,y], INIT_CHEMOKINE)
+		}
+	}
+
     sim.C.add( new CPM.ChemotaxisConstraint( {
         LAMBDA_CH: [0,5000],
         CH_FIELD : sim.g }
@@ -103,6 +115,9 @@ function initialize(){
         return -delta*lambdachem
     }
     sim.C.getConstraint("ChemotaxisConstraint").deltaH = dH
+    bc = sim.C.getConstraint("BorderConstraint")
+
+    // console.log(sim.C.getConstraint("BorderConstraint").barriervoxels)
     // End Manuel BugFix
 
 	meter = new FPSMeter({left:"auto", right:"5px"})
@@ -127,7 +142,10 @@ function initializeGrid() {
 		BARRIER_VOXELS: this.walls
 	}))
 
-    this.gm.seedCellAt(1, [0, 0])
+    this.gm.seedCellAt(1, [160, 160])
+		this.gm.seedCellAt(1, [160, 40])
+		this.gm.seedCellAt(1, [40, 40])
+		this.gm.seedCellAt(1, [40, 160])
 }
 
 function postMCSListener(){
@@ -136,24 +154,16 @@ function postMCSListener(){
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
 	}
-	// this.g.multiplyBy( 0.95 )
-  
-    for (let i = 0; i <= this.C.extents[0]; i++){
-        for (let j = 0; j <= this.C.extents[1]; j++){
-            if (sim.C.pixt([i,j]) == 1){
-                // this.g.setpix([i,j], 0)
-            }
-        }
-    }
+    removeChemokines(this)
 }
 
-function removeChemokines(sim) {
+function removeChemokines(obj) {
     // TODO: CAN THIS BE OPTIMIZED?
     // This is were he eats
-    for (let i = 0; i <= this.C.extents[0]; i++){
-        for (let j = 0; j <= this.C.extents[1]; j++){
+    for (let i = 0; i <= obj.C.extents[0]; i++){
+        for (let j = 0; j <= obj.C.extents[1]; j++){
             if (sim.C.pixt([i,j]) == 1){
-                this.g.setpix([i,j], 0)
+                obj.g.setpix([i,j], obj.g.pixt([i,j]) * RUPSJENOOITGENOEG)
             }
         }
     }
@@ -168,7 +178,10 @@ function drawCanvas(){
     this.drawBelow()
 }
 
-
+// Draws the pixels in BARRIER_VOXELS
+function drawBelow() {
+	this.Cim.drawPixelSet(this.walls, "AAAAAA");
+}
 
 // Grid size: 528x100
 function createEasyMaze() {
@@ -228,25 +241,20 @@ function inOrder(p1, p2) {
 	}
 }
 
-// Draws the pixels in BARRIER_VOXELS
-function drawBelow() {
-	this.Cim.drawPixelSet(this.walls, "AAAAAA");
-}
-
-
 /** Perform a diffusion step on the grid, updating the values of all pixels
  * according to Fick's second law of diffusion.
  * @param {number} D diffusion coefficient
  * @see https://en.wikipedia.org/wiki/Diffusion#Fick's_law_and_equations
  * @see https://en.wikipedia.org/wiki/Discrete_Laplace_operator#Mesh_Laplacians
  * */
+// TODO: OPTIMISE
 function diffusion( D ) {
     // For synchronous updating of the grid: compute updated values in a copy
     // of the current pixels
     if( ! this._pixelsbuffer ) this.pixelsBuffer();
     for( let i of this.pixelsi() ){
 		// console.log(i, this.pixti(i))
-		if (i in sim.C.getConstraint("BorderConstraint").barriervoxels) continue;
+		if (bc.barriervoxels[i]) continue;
         // Diffusion: new value is current value + change.
         // the change is given by the diffusion coefficient D times the laplacian.
         this._pixelsbuffer[i] = this.pixti( i ) + D * this.laplaciani( i );
@@ -255,7 +263,7 @@ function diffusion( D ) {
     [this._pixelsbuffer, this._pixels] = [this._pixels, this._pixelsbuffer];
 }
 
-
+// TODO: OPTIMISE
 function* neighNeumanni( i, torus = this.torus ){
     // normal computation of neighbor indices (top left-middle-right, 
     // left, right, bottom left-middle-right)
@@ -263,7 +271,7 @@ function* neighNeumanni( i, torus = this.torus ){
     
 	function isBorder(j) {
 		// console.log(j, j in sim.C.getConstraint("BorderConstraint").barriervoxels)
-		return j in sim.C.getConstraint("BorderConstraint").barriervoxels
+		return bc.barriervoxels[j]
 	}
     // if pixel is part of one of the borders, adjust the 
     // indices accordingly
@@ -321,7 +329,7 @@ function* neighNeumanni( i, torus = this.torus ){
 <body onload="initialize()">
 	<h1>Maze</h1>
 	<p>
-		A maze in CPM
+		A maze with chemokines in CPM
 	</p>
 </body>
 </html>
