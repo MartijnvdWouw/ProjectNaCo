@@ -47,7 +47,11 @@ let config = {
 		
 		// VolumeConstraint parameters
 		LAMBDA_V : [0,50],								// VolumeConstraint importance per cellkind
-		V : [0,100],									// Target volume of each cellkind
+		V : [0,50],									// Target volume of each cellkind
+
+		LAMBDA_ACT : [0, 500],
+		MAX_ACT : [0, 200],
+		ACT_MEAN : 'geometric',
 
 		LAMBDA_P: [0,2],								// PerimeterConstraint importance per cellkind
 		P : [0,35],										// Target perimeter of each cellkind
@@ -62,6 +66,7 @@ let config = {
 		BURNIN : 500,
 		RUNTIME : 1000,
 		RUNTIME_BROWSER : "Inf",
+		ACTCOLOR : [true],
 		
 		// Visualization
 		zoom : 4,										// zoom in on canvas with this factor.
@@ -89,7 +94,6 @@ function initialize(){
 		initializeGrid : initializeGrid,
         postMCSListener : postMCSListener,
 		drawBelow: drawBelow,
-        drawCanvas: drawCanvas
 	}
 
     sim = new CPM.Simulation( config, custommethods )
@@ -107,7 +111,7 @@ function initialize(){
 	}
 
     sim.C.add( new CPM.ChemotaxisConstraint( {
-        LAMBDA_CH: [0,5000],
+        LAMBDA_CH: [0, 1000],
         CH_FIELD : sim.g }
     ) )
 
@@ -150,7 +154,7 @@ function initializeGrid() {
 
 function postMCSListener(){
 	let center = [this.C.extents[0]/2,this.C.extents[1]/2]
-	this.g.setpix( center, 10000+this.g.pixt(center) )
+	this.g.setpix( center, 300+this.g.pixt(center) )
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
 	}
@@ -158,27 +162,20 @@ function postMCSListener(){
 }
 
 function removeChemokines(obj) {
-    // This is were he eats
-    for (let i = 0; i <= obj.C.extents[0]; i++){
-        for (let j = 0; j <= obj.C.extents[1]; j++){
-            if (sim.C.pixt([i,j]) == 1){
-                obj.g.setpix([i,j], obj.g.pixt([i,j]) * RUPSJENOOITGENOEG)
-            }
-        }
-    }
-}
+    // This is where he eats
 
-function drawCanvas(){
-	// Add the canvas if required
-	if( !this.helpClasses["canvas"] ){ this.addCanvas() }
-	this.Cim.drawField( this.g )
-	this.Cim.drawCellBorders( -1, "000000" )
-
-    this.drawBelow()
+	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
+		for (const location of pixels) {
+			obj.g.setpix(location, obj.g.pixt(location) - 3)
+		}
+	}
 }
 
 // Draws the pixels in BARRIER_VOXELS
 function drawBelow() {
+	if( !this.helpClasses["canvas"] ){ this.addCanvas() }
+	this.Cim.drawField( this.g )
+	this.Cim.drawCellBorders( -1, "000000" )
 	this.Cim.drawPixelSet(this.walls, "AAAAAA");
 }
 
