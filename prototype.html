@@ -153,7 +153,7 @@ function initializeGrid() {
 
 function postMCSListener(){
 	let end = [85, 160]
-	this.g.setpix( end, 3000+this.g.pixt(end) )
+	this.g.setpix( end, 500+this.g.pixt(end) )
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
 	}
@@ -165,7 +165,7 @@ function removeChemokines(obj) {
 
 	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
 		for (const location of pixels) {
-			obj.g.setpix(location, Math.max(0, obj.g.pixt(location) - 40))
+			obj.g.setpix(location, Math.max(0, obj.g.pixt(location) - 8))
 		}
 	}
 }
