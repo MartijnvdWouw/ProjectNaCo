@@ -28,7 +28,7 @@ let GRID_WIDTH = 170
 let GRID_HEIGHT = 170
 
 let RUPSJENOOITGENOEG = 0.95
-let INIT_CHEMOKINE = 100
+let INIT_CHEMOKINE = 500
 
 let config = {
 	// Grid settings
@@ -49,11 +49,11 @@ let config = {
 		LAMBDA_V : [0,50],								// VolumeConstraint importance per cellkind
 		V : [0,20],									// Target volume of each cellkind
 
-		LAMBDA_ACT : [0, 500],
-		MAX_ACT : [0, 100],
+		LAMBDA_ACT : [0, 50],
+		MAX_ACT : [0, 20],
 		ACT_MEAN : 'geometric',
 
-		LAMBDA_P: [0,10],								// PerimeterConstraint importance per cellkind
+		LAMBDA_P: [0,1],								// PerimeterConstraint importance per cellkind
 		P : [0,50],										// Target perimeter of each cellkind
 	},
 	
@@ -111,7 +111,7 @@ function initialize(){
 	}
 
     sim.C.add( new CPM.ChemotaxisConstraint( {
-        LAMBDA_CH: [0, 100],
+        LAMBDA_CH: [0, 40],
         CH_FIELD : sim.g }
     ) )
 
@@ -154,7 +154,7 @@ function initializeGrid() {
 
 function postMCSListener(){
 	let end = [85, 160]
-	this.g.setpix( end, 300+this.g.pixt(end) )
+	this.g.setpix( end, 3000+this.g.pixt(end) )
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
 	}
@@ -166,7 +166,7 @@ function removeChemokines(obj) {
 
 	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
 		for (const location of pixels) {
-			obj.g.setpix(location, Math.max(0, obj.g.pixt(location) - 4))
+			obj.g.setpix(location, Math.max(0, obj.g.pixt(location) - 40))
 		}
 	}
 }
