@@ -28,7 +28,7 @@ let GRID_WIDTH = 170
 let GRID_HEIGHT = 170
 
 let RUPSJENOOITGENOEG = 0.95
-let INIT_CHEMOKINE = 10
+let INIT_CHEMOKINE = 20
 
 let config = {
 	// Grid settings
@@ -39,22 +39,22 @@ let config = {
 	conf : {
         torus: [false, false],
         seed: 1,
-        D: 0.1,
+        D: 0.15,
         T : 20,											// CPM temperature
 				
 		// Adhesion parameters:
-		J: [[0,20], [20,0]] ,
+		J: [[0,0], [0,0]] ,
 		
 		// VolumeConstraint parameters
 		LAMBDA_V : [0,50],								// VolumeConstraint importance per cellkind
-		V : [0,50],									// Target volume of each cellkind
+		V : [0,20],									// Target volume of each cellkind
 
 		LAMBDA_ACT : [0, 500],
 		MAX_ACT : [0, 200],
 		ACT_MEAN : 'geometric',
 
-		LAMBDA_P: [0,2],								// PerimeterConstraint importance per cellkind
-		P : [0,35],										// Target perimeter of each cellkind
+		LAMBDA_P: [0,20],								// PerimeterConstraint importance per cellkind
+		P : [0,30],										// Target perimeter of each cellkind
 	},
 	
 	// Simulation setup and configuration
@@ -146,15 +146,15 @@ function initializeGrid() {
 		BARRIER_VOXELS: this.walls
 	}))
 
-    this.gm.seedCellAt(1, [160, 160])
-		this.gm.seedCellAt(1, [160, 40])
-		this.gm.seedCellAt(1, [40, 40])
-		this.gm.seedCellAt(1, [40, 160])
+
+	for (let i = 0; i < 20; i ++) {
+		this.gm.seedCellAt(1, [60 + i*4, 10])
+	}
 }
 
 function postMCSListener(){
-	let center = [this.C.extents[0]/2,this.C.extents[1]/2]
-	this.g.setpix( center, 300+this.g.pixt(center) )
+	let end = [85, 160]
+	this.g.setpix( end, 300+this.g.pixt(end) )
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
 	}
@@ -166,7 +166,7 @@ function removeChemokines(obj) {
 
 	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
 		for (const location of pixels) {
-			obj.g.setpix(location, obj.g.pixt(location) - 3)
+			obj.g.setpix(location, Math.max(0, obj.g.pixt(location) - 4))
 		}
 	}
 }
@@ -256,49 +256,57 @@ function neighboursi( obj, i, torus ){
 
     let result = []
 
+	function add(cell, fallback, checkBorder = true) {
+		if (isBorder(cell)) {
+			result.push(fallback)
+		} else {
+			result.push(cell)
+		}
+	}
+
     // left border
     if( i < obj.extents[1]){
         if( torus[0] ){
             l += obj.extents[0] * obj.X_STEP;
-            result.push(isBorder(l) ? i : l)
+            add(l, i)
         } else {
 			result.push(i)
 		}
     } else {
-        result.push(isBorder(l) ? i : l)
+        add(l, i)
     }
     // right border
     if( i >= obj.X_STEP*( obj.extents[0] - 1 ) ){
         if( torus[0] ){
             r -= obj.extents[0] * obj.X_STEP;
-            result.push(isBorder(r) ? i : r)
+            add(r, i)
         } else {
 			result.push(i)
 		}		
     } else {
-        result.push(isBorder(r) ? i : r)
+        add(r, i)
     }
     // top border
     if( i % obj.X_STEP === 0 ){
         if( torus[1] ){
             t += obj.extents[1];
-            result.push(isBorder(t) ? i : t)
+            add(t, i)
         } else {
 			result.push(i)
 		}
     } else {
-        result.push(isBorder(t) ? i : t)
+        add(t, i)
     }
     // bottom border
     if( (i+1-obj.extents[1]) % obj.X_STEP === 0 ){
         if( torus[1] ){
             b -= obj.extents[1];
-            result.push(isBorder(b) ? i : b)
+            add(b, i)
         } else {
 			result.push(i)
 		}
     } else {
-        result.push(isBorder(b) ? i : b)
+        add(b, i)
     }
 
     return result
