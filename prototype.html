@@ -28,7 +28,7 @@ let GRID_WIDTH = 170
 let GRID_HEIGHT = 170
 
 let RUPSJENOOITGENOEG = 0.95
-let INIT_CHEMOKINE = 20
+let INIT_CHEMOKINE = 100
 
 let config = {
 	// Grid settings
@@ -50,11 +50,11 @@ let config = {
 		V : [0,20],									// Target volume of each cellkind
 
 		LAMBDA_ACT : [0, 500],
-		MAX_ACT : [0, 200],
+		MAX_ACT : [0, 100],
 		ACT_MEAN : 'geometric',
 
-		LAMBDA_P: [0,20],								// PerimeterConstraint importance per cellkind
-		P : [0,30],										// Target perimeter of each cellkind
+		LAMBDA_P: [0,10],								// PerimeterConstraint importance per cellkind
+		P : [0,50],										// Target perimeter of each cellkind
 	},
 	
 	// Simulation setup and configuration
@@ -111,7 +111,7 @@ function initialize(){
 	}
 
     sim.C.add( new CPM.ChemotaxisConstraint( {
-        LAMBDA_CH: [0, 1000],
+        LAMBDA_CH: [0, 100],
         CH_FIELD : sim.g }
     ) )
 
