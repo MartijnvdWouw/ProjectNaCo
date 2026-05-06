@@ -29,6 +29,8 @@ let GRID_HEIGHT = 170
 
 let RUPSJENOOITGENOEG = 0.95
 let INIT_CHEMOKINE = 100
+let POOP_FACTOR = 0.7
+let DISSIPATION_FACTOR = 0.99
 
 let config = {
 	// Grid settings
@@ -167,13 +169,18 @@ function initializeGrid() {
 
 function postMCSListener(){
 	let end = [85, 160]
-	let end2 = [60, 10]
 	this.g.setpix( end, 500+this.g.pixt(end) )
-	this.g2.setpix(end2, 10000);
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
 		this.g2.diffusion(this.C.conf["D"] )
 	}
+
+	for (let i =0; i < this.g2.extents[0]; i ++){
+		for (let j =0; j < this.g2.extents[1]; j ++){
+			this.g2.setpix([i, j], this.g2.pixt([i,j])*DISSIPATION_FACTOR)
+		}
+	}
+
     removeChemokines(this)
 }
 
@@ -182,7 +189,10 @@ function removeChemokines(obj) {
 
 	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
 		for (const location of pixels) {
-			obj.g.setpix(location, Math.max(0, obj.g.pixt(location) - 8))
+			const old = obj.g.pixt(location)
+			const eatAmount = Math.min(8, old)
+			obj.g.setpix(location, old - eatAmount)
+			obj.g2.setpix(location, obj.g2.pixt(location) + eatAmount * POOP_FACTOR)
 		}
 	}
 }
@@ -190,40 +200,33 @@ function removeChemokines(obj) {
 // Draws the pixels in BARRIER_VOXELS
 function drawBelow() {
 	if( !this.helpClasses["canvas"] ){ this.addCanvas() }
-	drawFields(this.Cim, this.g, this.g2,)
+	drawFields(this.Cim, this.g, this.g2)
 	this.Cim.drawCellBorders( -1, "000000" )
 	this.Cim.drawPixelSet(this.walls, "AAAAAA");
 }
 
-function blendColors(cols) {
-    var base = [0, 0, 0, 0];
-    var mix;
-    var added;
-    while (added = cols.shift()) {
-        if (typeof added[3] === 'undefined') {
-            added[3] = 1;
-        }
-        // check if both alpha channels exist.
-        if (base[3] && added[3]) {
-            mix = [0, 0, 0, 0];
-            // alpha
-            mix[3] = 1 - (1 - added[3]) * (1 - base[3]);
-            // red
-            mix[0] = Math.round((added[0] * added[3] / mix[3]) + (base[0] * base[3] * (1 - added[3]) / mix[3]));
-            // green
-            mix[1] = Math.round((added[1] * added[3] / mix[3]) + (base[1] * base[3] * (1 - added[3]) / mix[3]));
-            // blue
-            mix[2] = Math.round((added[2] * added[3] / mix[3]) + (base[2] * base[3] * (1 - added[3]) / mix[3]));
+// thanks chatgpt :))
+function mixRGBA(c1, c2) {
+	const [r1, g1, b1, a1] = c1;
+	const [r2, g2, b2, a2] = c2;
 
-        } else if (added) {
-            mix = added;
-        } else {
-            mix = base;
-        }
-        base = mix;
-    }
+	const total = a1 + a2;
 
-    return mix;
+	if (total === 0) return [0, 0, 0, 0];
+
+	const r = (r1 * a1 + r2 * a2) / total;
+	const g = (g1 * a1 + g2 * a2) / total;
+	const b = (b1 * a1 + b2 * a2) / total;
+
+	// Keep it consistent with the same weighting idea
+	const a = 1 - (1 - a1) * (1 - a2)
+
+	return [
+		Math.round(r),
+		Math.round(g),
+		Math.round(b),
+		a
+	];
 }
 
 function componentToHex(c) {
@@ -235,12 +238,7 @@ function rgbToHex(r, g, b) {
   return "" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
-
 function drawFields(obj, cc, cc2, col = [0, 0, 255], col2 = [255, 0, 0] ){
-	if( !cc ){
-		cc = obj.grid;
-	}
-
 	let maxval = 0;
 	let maxval2 = 0;
 	for( let i = 0 ; i < cc.extents[0] ; i ++ ){
@@ -252,29 +250,22 @@ function drawFields(obj, cc, cc2, col = [0, 0, 255], col2 = [255, 0, 0] ){
 				maxval = p;
 			}
 
-			if( maxval < p2 ){
+			if( maxval2 < p2 ){
 				maxval2 = p2;
 			}
 		}
 	}
+
 	obj.getImageData();
-	//this.col_g = 0
-	//this.col_b = 0
+
 	for( let i = 0 ; i < cc.extents[0] ; i ++ ){
 		for( let j = 0 ; j < cc.extents[1] ; j ++ ){
-			//let colval = 255*(Math.log(.1+cc.pixt( [i,j] ))/maxval)
-			let alpha = (Math.log(.1+cc.pixt( [i,j] ))/maxval);
-			let alpha2 = (Math.log(.1+cc2.pixt( [i,j] ))/maxval2);
+			let alpha = Math.max(0, Math.min(1,(Math.log(.1+cc.pixt( [i,j] ))/maxval)))
+			let alpha2 = Math.max(0, Math.min(1,(Math.log(.1+cc2.pixt( [i,j] ))/maxval2)))
+			let baseCol = mixRGBA([...col, alpha], [...col2, alpha2])
+			obj.col(rgbToHex(baseCol[0], baseCol[1], baseCol[2]));
 
-			let blend = blendColors([[...col, alpha], [...col2, alpha2]]);
-			// console.log(blend)
-			// console.log(rgbToHex(blend[0], blend[1], blend[2]))
-			obj.col(rgbToHex(blend[0], blend[1], blend[2]));
-
-			//this.col_r = colval
-			//this.col_g = colval
-
-			obj.pxfi([i,j], blend[3]);
+			obj.pxfi([i,j], baseCol[3])
 		}
 	}
 	obj.putImageData();
