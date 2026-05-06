@@ -102,10 +102,18 @@ function initialize(){
     sim.g.diffusion = diffusion
     sim.g.neighNeumanni = neighNeumanni
 
+	sim.g2 = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.conf.torus, "Float32")
+    borderConstraint = sim.C.getConstraint("BorderConstraint")
+    initializeNeighbourObject(sim.g)
+    sim.g2.diffusion = diffusion
+    sim.g2.neighNeumanni = neighNeumanni
+
+
 	// Initial chemokine value for all cells in grid
 	for (let x = 0; x < GRID_WIDTH; x++) {
 		for (let y = 0; y < GRID_HEIGHT; y++) {
 			sim.g.setpix([x,y], INIT_CHEMOKINE)
+			sim.g2.setpix([x, y], 0);
 		}
 	}
 
@@ -114,13 +122,19 @@ function initialize(){
         CH_FIELD : sim.g }
     ) )
 
+	sim.C.add( new CPM.ChemotaxisConstraint( {
+        LAMBDA_CH: [0, 100],
+        CH_FIELD : sim.g2 }
+    ) )
+
     // Manual BugFix
     let dH = function( sourcei, targeti, src_type, tgt_type ){
         let delta = this.field.pixti( targeti ) - this.field.pixti( sourcei ) 
         let lambdachem = this.cellParameter( "LAMBDA_CH", src_type )
         return -delta*lambdachem
     }
-    sim.C.getConstraint("ChemotaxisConstraint").deltaH = dH
+    sim.C.getConstraint("ChemotaxisConstraint", 0).deltaH = dH
+	sim.C.getConstraint("ChemotaxisConstraint", 1).deltaH = dH
     // End Manuel BugFix
 
 	meter = new FPSMeter({left:"auto", right:"5px"})
@@ -153,9 +167,12 @@ function initializeGrid() {
 
 function postMCSListener(){
 	let end = [85, 160]
+	let end2 = [60, 10]
 	this.g.setpix( end, 500+this.g.pixt(end) )
+	this.g2.setpix(end2, 10000);
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
+		this.g2.diffusion(this.C.conf["D"] )
 	}
     removeChemokines(this)
 }
@@ -173,9 +190,40 @@ function removeChemokines(obj) {
 // Draws the pixels in BARRIER_VOXELS
 function drawBelow() {
 	if( !this.helpClasses["canvas"] ){ this.addCanvas() }
-	this.Cim.drawField( this.g )
+	drawFields(this.Cim, this.g, this.g2,)
 	this.Cim.drawCellBorders( -1, "000000" )
 	this.Cim.drawPixelSet(this.walls, "AAAAAA");
+}
+
+
+function drawFields(obj, cc, cc2, col = "0000FF" ){
+	if( !cc ){
+		cc = obj.grid;
+	}
+	obj.col(col);
+	let maxval = 0;
+	for( let i = 0 ; i < cc.extents[0] ; i ++ ){
+		for( let j = 0 ; j < cc.extents[1] ; j ++ ){
+			let p = Math.log(.1+cc.pixt([i,j]));
+			if( maxval < p ){
+				maxval = p;
+			}
+		}
+	}
+	obj.getImageData();
+	//this.col_g = 0
+	//this.col_b = 0
+	for( let i = 0 ; i < cc.extents[0] ; i ++ ){
+		for( let j = 0 ; j < cc.extents[1] ; j ++ ){
+			//let colval = 255*(Math.log(.1+cc.pixt( [i,j] ))/maxval)
+			let alpha = (Math.log(.1+cc.pixt( [i,j] ))/maxval);
+			//this.col_r = colval
+			//this.col_g = colval
+			obj.pxfi([i,j], alpha);
+		}
+	}
+	obj.putImageData();
+	obj.ctx.globalAlpha = 1;
 }
 
 // Grid size: 528x100
