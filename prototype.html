@@ -195,18 +195,65 @@ function drawBelow() {
 	this.Cim.drawPixelSet(this.walls, "AAAAAA");
 }
 
+function blendColors(cols) {
+    var base = [0, 0, 0, 0];
+    var mix;
+    var added;
+    while (added = cols.shift()) {
+        if (typeof added[3] === 'undefined') {
+            added[3] = 1;
+        }
+        // check if both alpha channels exist.
+        if (base[3] && added[3]) {
+            mix = [0, 0, 0, 0];
+            // alpha
+            mix[3] = 1 - (1 - added[3]) * (1 - base[3]);
+            // red
+            mix[0] = Math.round((added[0] * added[3] / mix[3]) + (base[0] * base[3] * (1 - added[3]) / mix[3]));
+            // green
+            mix[1] = Math.round((added[1] * added[3] / mix[3]) + (base[1] * base[3] * (1 - added[3]) / mix[3]));
+            // blue
+            mix[2] = Math.round((added[2] * added[3] / mix[3]) + (base[2] * base[3] * (1 - added[3]) / mix[3]));
 
-function drawFields(obj, cc, cc2, col = "0000FF" ){
+        } else if (added) {
+            mix = added;
+        } else {
+            mix = base;
+        }
+        base = mix;
+    }
+
+    return mix;
+}
+
+function componentToHex(c) {
+  var hex = c.toString(16);
+  return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+  return "" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+
+function drawFields(obj, cc, cc2, col = [0, 0, 255], col2 = [255, 0, 0] ){
 	if( !cc ){
 		cc = obj.grid;
 	}
-	obj.col(col);
+
 	let maxval = 0;
+	let maxval2 = 0;
 	for( let i = 0 ; i < cc.extents[0] ; i ++ ){
 		for( let j = 0 ; j < cc.extents[1] ; j ++ ){
 			let p = Math.log(.1+cc.pixt([i,j]));
+			let p2 = Math.log(.1+cc2.pixt([i,j]));
+
 			if( maxval < p ){
 				maxval = p;
+			}
+
+			if( maxval < p2 ){
+				maxval2 = p2;
 			}
 		}
 	}
@@ -217,9 +264,17 @@ function drawFields(obj, cc, cc2, col = "0000FF" ){
 		for( let j = 0 ; j < cc.extents[1] ; j ++ ){
 			//let colval = 255*(Math.log(.1+cc.pixt( [i,j] ))/maxval)
 			let alpha = (Math.log(.1+cc.pixt( [i,j] ))/maxval);
+			let alpha2 = (Math.log(.1+cc2.pixt( [i,j] ))/maxval2);
+
+			let blend = blendColors([[...col, alpha], [...col2, alpha2]]);
+			// console.log(blend)
+			// console.log(rgbToHex(blend[0], blend[1], blend[2]))
+			obj.col(rgbToHex(blend[0], blend[1], blend[2]));
+
 			//this.col_r = colval
 			//this.col_g = colval
-			obj.pxfi([i,j], alpha);
+
+			obj.pxfi([i,j], blend[3]);
 		}
 	}
 	obj.putImageData();
