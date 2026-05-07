@@ -174,12 +174,11 @@ function initializeGrid() {
 }
 
 function postMCSListener(){
+  let chemoSpawn = [50, 75]
+  // Increase Chemokines
+  this.g.setpix([50, 75], INIT_CHEMOKINE + this.g.pixt(chemoSpawn))
 
-	let end = [69, 85]
-	for (let y = 69; y <= 85; y++) {
-		this.g.setpix([50, y], INIT_CHEMOKINE + this.g.pixt(end) )	
-	}
-
+  // Chemokine diffusion 
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
 		this.g2.diffusion(this.C.conf["D"] )
@@ -190,13 +189,15 @@ function postMCSListener(){
 			this.g2.setpix([i, j], this.g2.pixt([i,j])*DISSIPATION_FACTOR)
 		}
 	}
+  
+  // This is where he eats
+  removeChemokines(this)
 
-    removeChemokines(this)
+  // All my friends are dead
+  finishCell(this, chemoSpawn)
 }
 
 function removeChemokines(obj) {
-    // This is where he eats
-
 	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
 		for (const location of pixels) {
 			const old = obj.g.pixt(location)
@@ -205,6 +206,18 @@ function removeChemokines(obj) {
 			obj.g2.setpix(location, obj.g2.pixt(location) + eatAmount * POOP_FACTOR)
 		}
 	}
+}
+
+function finishCell(obj,finish){
+  for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
+    for (const location of pixels) {
+      if (location[0] === finish[0] && location[1] === finish[1]){
+          let kill_id = obj.C.pixt(location)
+          obj.gm.killCell(kill_id)
+          console.log(`Killed cell ${kill_id} at timestep ${obj.time}`);
+      }
+    }
+  }
 }
 
 // Draws the pixels in BARRIER_VOXELS
