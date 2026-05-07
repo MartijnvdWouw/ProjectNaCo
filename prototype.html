@@ -188,8 +188,9 @@ function finishCell(obj,finish){
   for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
     for (const location of pixels) {
       if (location[0] === finish[0] && location[1] === finish[1]){
-          let id = obj.C.pixt(location)
-          obj.gm.killCell(id)
+          let kill_id = obj.C.pixt(location)
+          obj.gm.killCell(kill_id)
+          console.log(`Killed cell ${kill_id} at timestep ${obj.time}`);
       }
     }
   }
