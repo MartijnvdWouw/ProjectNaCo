@@ -29,8 +29,8 @@ let GRID_HEIGHT = 86
 
 let RUPSJENOOITGENOEG = 0.95
 let INIT_CHEMOKINE = 100
-
-let singlePrint = true 
+let POOP_FACTOR = 0.7
+let DISSIPATION_FACTOR = 0.99
 
 let config = {
 	// Grid settings
@@ -104,10 +104,18 @@ function initialize(){
     sim.g.diffusion = diffusion
     sim.g.neighNeumanni = neighNeumanni
 
+	sim.g2 = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.conf.torus, "Float32")
+    borderConstraint = sim.C.getConstraint("BorderConstraint")
+    initializeNeighbourObject(sim.g)
+    sim.g2.diffusion = diffusion
+    sim.g2.neighNeumanni = neighNeumanni
+
+
 	// Initial chemokine value for all cells in grid
 	for (let x = 0; x < GRID_WIDTH; x++) {
 		for (let y = 0; y < GRID_HEIGHT; y++) {
 			sim.g.setpix([x,y], INIT_CHEMOKINE)
+			sim.g2.setpix([x, y], 0);
 		}
 	}
 
@@ -116,13 +124,19 @@ function initialize(){
         CH_FIELD : sim.g }
     ) )
 
+	sim.C.add( new CPM.ChemotaxisConstraint( {
+        LAMBDA_CH: [0, 100],
+        CH_FIELD : sim.g2 }
+    ) )
+
     // Manual BugFix
     let dH = function( sourcei, targeti, src_type, tgt_type ){
         let delta = this.field.pixti( targeti ) - this.field.pixti( sourcei ) 
         let lambdachem = this.cellParameter( "LAMBDA_CH", src_type )
         return -delta*lambdachem
     }
-    sim.C.getConstraint("ChemotaxisConstraint").deltaH = dH
+    sim.C.getConstraint("ChemotaxisConstraint", 0).deltaH = dH
+	sim.C.getConstraint("ChemotaxisConstraint", 1).deltaH = dH
     // End Manuel BugFix
 
 	meter = new FPSMeter({left:"auto", right:"5px"})
@@ -167,6 +181,13 @@ function postMCSListener(){
   // Chemokine diffusion 
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
+		this.g2.diffusion(this.C.conf["D"] )
+	}
+
+	for (let i =0; i < this.g2.extents[0]; i ++){
+		for (let j =0; j < this.g2.extents[1]; j ++){
+			this.g2.setpix([i, j], this.g2.pixt([i,j])*DISSIPATION_FACTOR)
+		}
 	}
   
   // This is where he eats
@@ -179,7 +200,10 @@ function postMCSListener(){
 function removeChemokines(obj) {
 	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
 		for (const location of pixels) {
-			obj.g.setpix(location, Math.max(0, obj.g.pixt(location) - 8))
+			const old = obj.g.pixt(location)
+			const eatAmount = Math.min(8, old)
+			obj.g.setpix(location, old - eatAmount)
+			obj.g2.setpix(location, obj.g2.pixt(location) + eatAmount * POOP_FACTOR)
 		}
 	}
 }
@@ -199,9 +223,76 @@ function finishCell(obj,finish){
 // Draws the pixels in BARRIER_VOXELS
 function drawBelow() {
 	if( !this.helpClasses["canvas"] ){ this.addCanvas() }
-	this.Cim.drawField( this.g )
+	drawFields(this.Cim, this.g, this.g2)
 	this.Cim.drawCellBorders( -1, "000000" )
 	this.Cim.drawPixelSet(this.walls, "AAAAAA");
+}
+
+// thanks chatgpt :))
+function mixRGBA(c1, c2) {
+	const [r1, g1, b1, a1] = c1;
+	const [r2, g2, b2, a2] = c2;
+
+	const total = a1 + a2;
+
+	if (total === 0) return [0, 0, 0, 0];
+
+	const r = (r1 * a1 + r2 * a2) / total;
+	const g = (g1 * a1 + g2 * a2) / total;
+	const b = (b1 * a1 + b2 * a2) / total;
+
+	// Keep it consistent with the same weighting idea
+	const a = 1 - (1 - a1) * (1 - a2)
+
+	return [
+		Math.round(r),
+		Math.round(g),
+		Math.round(b),
+		a
+	];
+}
+
+function componentToHex(c) {
+  var hex = c.toString(16);
+  return hex.length == 1 ? "0" + hex : hex;
+}
+
+function rgbToHex(r, g, b) {
+  return "" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
+
+function drawFields(obj, cc, cc2, col = [0, 0, 255], col2 = [255, 0, 0] ){
+	let maxval = 0;
+	let maxval2 = 0;
+	for( let i = 0 ; i < cc.extents[0] ; i ++ ){
+		for( let j = 0 ; j < cc.extents[1] ; j ++ ){
+			let p = Math.log(.1+cc.pixt([i,j]));
+			let p2 = Math.log(.1+cc2.pixt([i,j]));
+
+			if( maxval < p ){
+				maxval = p;
+			}
+
+			if( maxval2 < p2 ){
+				maxval2 = p2;
+			}
+		}
+	}
+
+	obj.getImageData();
+
+	for( let i = 0 ; i < cc.extents[0] ; i ++ ){
+		for( let j = 0 ; j < cc.extents[1] ; j ++ ){
+			let alpha = Math.max(0, Math.min(1,(Math.log(.1+cc.pixt( [i,j] ))/maxval)))
+			let alpha2 = Math.max(0, Math.min(1,(Math.log(.1+cc2.pixt( [i,j] ))/maxval2)))
+			let baseCol = mixRGBA([...col, alpha], [...col2, alpha2])
+			obj.col(rgbToHex(baseCol[0], baseCol[1], baseCol[2]));
+
+			obj.pxfi([i,j], baseCol[3])
+		}
+	}
+	obj.putImageData();
+	obj.ctx.globalAlpha = 1;
 }
 
 // Grid size: 528x100
