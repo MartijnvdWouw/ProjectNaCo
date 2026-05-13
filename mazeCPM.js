@@ -172,7 +172,7 @@ function postMCSListener(){
   removeChemokines(this)
 
   // All my friends are dead
-  finishCell(this, [18, 1])
+  finishCell(this, chemoSpawn)
 }
 
 function removeChemokines(obj) {
