@@ -185,15 +185,36 @@ function getMediumMazeParams() {
     return [86, 86, _createMediumMaze(), [], _getMediumMazeEndZone(), "mediumMaze"]
 }
 
+function  _createOverLeafVizMaze() {
+    wp = []
+
+    wp = wp.concat(getWallPixels({x: 3, y: 1}, {x:3, y: 6}))
+    wp = wp.concat(getWallPixels({x: 6, y: 9}, {x:6, y: 3}))
+
+
+    wp = wp.concat(getWallPixels({x: 0, y: 9}, {x:0, y: 0}))
+    wp = wp.concat(getWallPixels({x: 0, y: 9}, {x:9, y: 9}))
+    wp = wp.concat(getWallPixels({x: 9, y: 9}, {x:9, y: 0}))
+    wp = wp.concat(getWallPixels({x: 9, y: 0}, {x:0, y: 0}))
+    return wp
+}
+
+function getOverLeafVizMazeParams() {
+    return [10,10,_createOverLeafVizMaze(), [], [[7,8],[8,8]], "overleafMaze"]
+}
+
 function run(width, height, wallPixels, startZone, endZone, filename, visualization=false) {
     const distances = calculateDistances(width, height, wallPixels, startZone, endZone)
     let str = visualization ? getVisualisationStr(width, height, distances) : getOutputStr(width, height, distances)
     saveFile(visualization ? `${filename}-viz`: filename, str)
 }
 
+
 //usage
-run(...getMediumMazeParams())
+// run(...getMediumMazeParams())
 //or for visualization
-run(...getMediumMazeParams(), true)
+// run(...getMediumMazeParams(), true)
+
+run(...getOverLeafVizMazeParams(), true)
 
 //to run for easy maze, copy easy maze definitions from prototype.html (same things as for medium maze).
