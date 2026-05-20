@@ -7,10 +7,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 DOWN_TIME_BUFFER = 0
+GRADIENT_IDENTIFIER = "GRADIENT"
 
 def read_results(file_name: str):
     cell_data = []
     kill_data = []
+    gradienta_data: dict[str, list] = {}
+    gradientb_data: dict[str, list] = {}
+
 
     with open(file_name) as file:
         number_of_cells = int(file.readline())
@@ -18,7 +22,20 @@ def read_results(file_name: str):
 
         for line in file:
             res = line.split()
-            if (len(res) == 5):
+            if (len(res) > 0 and res[0] == GRADIENT_IDENTIFIER):
+                id = res[2]
+                value = float(res[3])
+                if id in gradienta_data:
+                    gradienta_data[id].append(value)
+                else:
+                    gradienta_data[id] = [value]
+
+                value = float(res[4])
+                if id in gradientb_data:
+                    gradientb_data[id].append(value)
+                else:
+                    gradientb_data[id] = [value]
+            elif (len(res) == 5):
                 cell_data.append({
                     "step": int(res[0]),
                     "id": int(res[1]),
@@ -26,10 +43,9 @@ def read_results(file_name: str):
                     "x": round(float(res[3])),
                     "y": round(float(res[4]))
                 })
-
-            if (len(res) == 2):
+            elif (len(res) == 2):
                 kill_data.append((int(res[0]), int(res[1])))
-    return number_of_cells, number_of_steps, cell_data, kill_data
+    return number_of_cells, number_of_steps, cell_data, kill_data, gradienta_data, gradientb_data
 
 def read_distances(file_name: str): 
     with open(file_name) as file:
@@ -144,8 +160,19 @@ def plot_down_time(down_times):
     plt.boxplot(down_times)
     plt.show()
 
+def plot_gradient(gradient: dict[str, list]):
+    plt.figure(figsize=(10, 5))
+    for k, data in gradient.items():
+        plt.plot(np.arange(len(data)), data, alpha=0.3, linewidth=2, label=f"Experienced Gradient {k}")
+    plt.xlabel("Steps")
+    plt.ylabel("Gradient")
+    plt.title("Experienced Gradient over time")
+    # plt.legend()
+    plt.grid(True)
+    plt.show()
+
 def main():
-    (nr_of_cells, nr_of_steps, cell_data, kill_data) = read_results("exp4.txt")
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, gradienta_data, gradientb_data) = read_results("test1.txt")
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1
@@ -163,6 +190,10 @@ def main():
 
     # Plot 3
     plot_down_time(down_times)
+
+    plot_gradient(gradienta_data)
+    plot_gradient(gradientb_data)
+    
     
 
 if __name__=="__main__":

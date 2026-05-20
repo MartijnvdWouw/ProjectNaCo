@@ -174,11 +174,41 @@ function postMCSListener(){
 		}
 	}
   
-  // This is where he eats
-  removeChemokines(this)
+	// This is where he eats
+	removeChemokines(this)
 
-  // All my friends are dead
-  finishCell(this, chemoSpawn)
+	// All my friends are dead
+	finishCell(this, chemoSpawn)
+	for (const [k, v] of Object.entries(computeGradientsPerCell(this))) {
+		console.log(`GRADIENT\t${this.time}\t${k}\t${v[0]}\t${v[1]}`)
+	}
+}
+
+function computeGradientsPerCell(obj) {
+	const pixelsPerCell = obj.C.getStat(CPM.PixelsByCell )
+	const gradientPerCell = {}
+
+	for (const [k, v] of Object.entries(pixelsPerCell)) {
+		let sum = 0
+		let sx = 0
+		let sy = 0
+		let count = 0
+		for (const [x, y] of v) {
+			const index = obj.g.p2i([x,y])
+			const neighbours = neighbourObject[index] //left, right, top, bottom
+			// console.log(neighbours.map(x => obj.g.pixti(x)))
+			if (neighbours.length === 0) continue;
+
+			const gx = (obj.g.pixti(neighbours[1]) - obj.g.pixti(neighbours[0])) * 0.5
+			const gy = (obj.g.pixti(neighbours[3]) - obj.g.pixti(neighbours[2])) * 0.5
+			sum += Math.hypot(gx, gy)
+			sx += gx
+			sy += gy
+			count ++
+		}
+		gradientPerCell[k] = count > 0 ? [sum / count, Math.hypot(sx/count, sy/count)] : [0,0];
+	}
+	return gradientPerCell
 }
 
 function removeChemokines(obj) {
