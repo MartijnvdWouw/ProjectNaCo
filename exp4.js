@@ -3,7 +3,6 @@ let CPM = require("./artistoo-master/build/artistoo-cjs.js");
 let GRID_WIDTH = 86
 let GRID_HEIGHT = 86
 
-let RUPSJENOOITGENOEG = 0.95
 let INIT_CHEMOKINE = 100
 let POOP_FACTOR = 0.7
 let DISSIPATION_FACTOR = 0.99
@@ -56,7 +55,7 @@ let config = {
 		SAVEIMG : true,									// Should a png image of the grid be saved
 		// during the simulation?
 		IMGFRAMERATE : 1000,								// If so, do this every <IMGFRAMERATE> MCS.
-		SAVEPATH : "img",				// ... And save the image in this folder.
+		SAVEPATH : "img/exp4",				// ... And save the image in this folder.
 		EXPNAME : "Chemotaxis",							// Used for the filename of output images.
 		
 		// Output stats etc

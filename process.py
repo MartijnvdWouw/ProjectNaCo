@@ -108,7 +108,10 @@ def avg_distances(number_of_steps: int, cell_distances: list[list[int]], count_k
         if (count_kills):
             avg.append(total/len(cell_distances))
         else: 
-            avg.append(total/(count))
+            if count < 1:
+                avg.append(0)
+            else :
+                avg.append(total/(count))
         current_index += 1
     return avg
 
@@ -142,7 +145,7 @@ def plot_down_time(down_times):
     plt.show()
 
 def main():
-    (nr_of_cells, nr_of_steps, cell_data, kill_data) = read_results("exp2.txt")
+    (nr_of_cells, nr_of_steps, cell_data, kill_data) = read_results("exp4.txt")
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1
