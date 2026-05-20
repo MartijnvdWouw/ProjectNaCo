@@ -13,6 +13,9 @@ def read_results(file_name: str):
     kill_data = []
 
     with open(file_name) as file:
+        number_of_cells = int(file.readline())
+        number_of_steps = int(file.readline())
+
         for line in file:
             res = line.split()
             if (len(res) == 5):
@@ -26,7 +29,7 @@ def read_results(file_name: str):
 
             if (len(res) == 2):
                 kill_data.append((int(res[0]), int(res[1])))
-    return cell_data, kill_data
+    return number_of_cells, number_of_steps, cell_data, kill_data
 
 def read_distances(file_name: str): 
     with open(file_name) as file:
@@ -139,10 +142,7 @@ def plot_down_time(down_times):
     plt.show()
 
 def main():
-    nr_of_cells = 20
-    nr_of_steps = 2500
-
-    (cell_data, kill_data) = read_results("martijn.txt")
+    (nr_of_cells, nr_of_steps, cell_data, kill_data) = read_results("exp2.txt")
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1

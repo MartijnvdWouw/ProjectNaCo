@@ -1,0 +1,348 @@
+let CPM = require("./artistoo-master/build/artistoo-cjs.js");
+
+let GRID_WIDTH = 86
+let GRID_HEIGHT = 86
+
+let INIT_CHEMOKINE = 100
+let NUMBER_OF_CELLS = 20
+let NUMBER_OF_STEPS = 10001
+
+let config = {
+	// Grid settings
+	ndim : 2,
+	field_size : [GRID_WIDTH,GRID_HEIGHT],
+	
+	// CPM parameters and configuration
+	conf : {
+        torus: [false, false],
+        seed: 1,
+        D: 0.15,
+        T : 20,											// CPM temperature
+				
+		// Adhesion parameters:
+		J: [[0,0], [0,0]] ,
+		
+		// VolumeConstraint parameters
+		LAMBDA_V : [0,50],								// VolumeConstraint importance per cellkind
+		V : [0,20],									// Target volume of each cellkind
+
+		LAMBDA_ACT : [0, 500],
+		MAX_ACT : [0, 100],
+		ACT_MEAN : 'geometric',
+
+		LAMBDA_P: [0,10],								// PerimeterConstraint importance per cellkind
+		P : [0,50],										// Target perimeter of each cellkind
+	},
+	
+	// Simulation setup and configuration
+	simsettings : {
+		// Cells on the grid
+		NRCELLS : [1],								// Number of cells to seed for all
+		// non-background cellkinds.
+		// Runtime etc
+		BURNIN : 1,
+		RUNTIME : NUMBER_OF_STEPS,
+		RUNTIME_BROWSER : 100,//"Inf",
+		ACTCOLOR : [true],
+		
+		// Visualization
+		zoom : 4,										// zoom in on canvas with this factor.
+		
+		// Output images
+		SAVEIMG : true,									// Should a png image of the grid be saved
+		// during the simulation?
+		IMGFRAMERATE : 1000,								// If so, do this every <IMGFRAMERATE> MCS.
+		SAVEPATH : "img/exp2",				// ... And save the image in this folder.
+		EXPNAME : "Chemotaxis",							// Used for the filename of output images.
+		
+		// Output stats etc
+		STATSOUT : { browser: false, node: true }, 		// Should stats be computed?
+		LOGRATE : 1  									// Output stats every <LOGRATE> MCS.
+
+	}
+}
+
+// Initialize simulation for html
+let sim, meter, borderConstraint
+const neighbourObject = {}
+
+function initialize(){
+	let custommethods = {
+		initializeGrid : initializeGrid,
+        postMCSListener : postMCSListener,
+		drawBelow: drawBelow,
+	}
+
+	console.log(NUMBER_OF_CELLS)
+	console.log(NUMBER_OF_STEPS)
+
+    sim = new CPM.Simulation( config, custommethods )
+    sim.g = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.conf.torus, "Float32")
+    borderConstraint = sim.C.getConstraint("BorderConstraint")
+    initializeNeighbourObject(sim.g)
+    sim.g.diffusion = diffusion
+    sim.g.neighNeumanni = neighNeumanni
+
+    borderConstraint = sim.C.getConstraint("BorderConstraint")
+    initializeNeighbourObject(sim.g)
+
+
+	// Initial chemokine value for all cells in grid
+	for (let x = 0; x < GRID_WIDTH; x++) {
+		for (let y = 0; y < GRID_HEIGHT; y++) {
+			sim.g.setpix([x,y], INIT_CHEMOKINE)
+			// sim.g2.setpix([x, y], 0);
+		}
+	}
+
+    sim.C.add( new CPM.ChemotaxisConstraint( {
+        LAMBDA_CH: [0, 100],
+        CH_FIELD : sim.g }
+    ) )
+
+    // Manual BugFix
+    let dH = function( sourcei, targeti, src_type, tgt_type ){
+        let delta = this.field.pixti( targeti ) - this.field.pixti( sourcei ) 
+        let lambdachem = this.cellParameter( "LAMBDA_CH", src_type )
+        return -delta*lambdachem
+    }
+    sim.C.getConstraint("ChemotaxisConstraint", 0).deltaH = dH
+    sim.run()
+}
+
+function initializeGrid() {
+	if (!this.helpClasses['gm']) {
+		this.addGridManipulator();
+	}
+
+	this.walls = createMediumMaze()
+	this.C.add(new CPM.BorderConstraint({
+		BARRIER_VOXELS: this.walls
+	}))
+
+	let nrOfCells = NUMBER_OF_CELLS;
+	for (let x = 18; x <= 33; x+=2) {
+		for (let y = 1; y <= 16; y+=2) {
+			if (nrOfCells <= 0) {
+				break;
+			}
+			this.gm.seedCellAt(1, [x, y])
+			nrOfCells--;
+		}
+	}
+}
+
+function postMCSListener(){
+  let chemoSpawn = [50, 75]
+  // Increase Chemokines
+  this.g.setpix([50, 75], INIT_CHEMOKINE + this.g.pixt(chemoSpawn))
+
+  // Chemokine diffusion 
+	for( let i = 1 ; i <= 10 ; i ++ ){
+		this.g.diffusion( this.C.conf["D"] )
+	}
+  
+  // This is where he eats
+  removeChemokines(this)
+
+  // All my friends are dead
+  finishCell(this, chemoSpawn)
+}
+
+function removeChemokines(obj) {
+	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
+		for (const location of pixels) {
+			const old = obj.g.pixt(location)
+			const eatAmount = Math.min(8, old)
+			obj.g.setpix(location, old - eatAmount)
+		}
+	}
+}
+
+function finishCell(obj,finish){
+  for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
+    for (const location of pixels) {
+      if (location[0] === finish[0] && location[1] === finish[1]){
+          let kill_id = obj.C.pixt(location)
+          obj.gm.killCell(kill_id)
+          console.log(`${obj.time}\t${kill_id}`)
+      }
+    }
+  }
+}
+
+// Draws the pixels in BARRIER_VOXELS
+function drawBelow() {
+	if( !this.helpClasses["canvas"] ){ this.addCanvas() }
+	// drawFields(this.Cim, this.g, this.g2)
+	this.Cim.drawField( this.g )
+	this.Cim.drawCellBorders( -1, "000000" )
+	this.Cim.drawPixelSet(this.walls, "AAAAAA")
+}
+
+// Grid size: 528x100
+function createEasyMaze() {
+	let wallPixels = []
+
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 31}, {x: 213, y: 31}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 65}, {x: 213, y: 65}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 213, y: 0}, {x: 213, y: 30}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 213, y: 66}, {x: 213, y: 99}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 249, y: 32}, {x: 249, y: 64}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 249, y: 31}, {x: 527, y: 31}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 249, y: 65}, {x: 527, y: 65}))
+
+	return wallPixels
+}
+
+// Grid size: 86x86
+function createMediumMaze() {
+	let wallPixels = []
+
+	wallPixels = wallPixels.concat(getWallPixels({x: 17, y: 0}, {x: 17, y: 17}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 17, y: 34}, {x: 17, y: 68}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 34, y: 34}, {x: 34, y: 51}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 51, y: 17}, {x: 51, y: 51}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 51, y: 68}, {x: 51, y: 85}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 68, y: 34}, {x: 68, y: 51}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 17, y: 17}, {x: 51, y: 17}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 68, y: 17}, {x: 85, y: 17}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 17, y: 51}, {x: 34, y: 51}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 68, y: 51}, {x: 85, y: 51}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 68}, {x: 17, y: 68}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 34, y: 68}, {x: 68, y: 68}))
+
+	// Borders
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 0}, {x: 0, y: 85}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 0}, {x: 85, y: 0}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 0, y: 85}, {x: 85, y: 85}))
+	wallPixels = wallPixels.concat(getWallPixels({x: 85, y: 0}, {x: 85, y: 85}))
+
+	return wallPixels
+}
+
+// Expects two {x : Int, y: Int}, returns an array with pixels
+function getWallPixels(p1, p2) {
+	let sorted = inOrder(p1, p2)
+
+	let wallPixels = []
+	for (let x = sorted.smallestX; x <= sorted.largestX; x++) {
+		for (let y = sorted.smallestY; y <= sorted.largestY; y++) {
+			wallPixels.push([x, y])
+		}
+	}
+	return wallPixels
+}
+
+// Expects two {x : Int, y: Int}, returns {smallestX: Int, largestX: Int, smallestY: Int, largestY: Int}
+function inOrder(p1, p2) {
+	return {
+		smallestX: p1.x < p2.x ? p1.x : p2.x,
+		largestX: p1.x >= p2.x ? p1.x : p2.x,
+		smallestY: p1.y < p2.y ? p1.y : p2.y,
+		largestY: p1.y >= p2.y ? p1.y : p2.y
+	}
+}
+
+function initializeNeighbourObject(obj){
+    if( ! obj._pixelsbuffer ) obj.pixelsBuffer();
+    for( let i of obj.pixelsi() ){
+		if (borderConstraint.barriervoxels[i]) neighbourObject[i] = [];
+        neighbourObject[i] = neighboursi(obj, i, obj.torus)
+    }
+}
+
+function neighboursi( obj, i, torus ){
+    // normal computation of neighbor indices (top left-middle-right, 
+    // left, right, bottom left-middle-right)
+    let t = i-1, l = i-obj.X_STEP, r = i+obj.X_STEP, b = i+1;
+    
+	function isBorder(j) {
+		return borderConstraint.barriervoxels[j]
+	}
+
+    let result = []
+
+	function add(cell, fallback, checkBorder = true) {
+		if (isBorder(cell)) {
+			result.push(fallback)
+		} else {
+			result.push(cell)
+		}
+	}
+
+    // left border
+    if( i < obj.extents[1]){
+        if( torus[0] ){
+            l += obj.extents[0] * obj.X_STEP;
+            add(l, i)
+        } else {
+			result.push(i)
+		}
+    } else {
+        add(l, i)
+    }
+    // right border
+    if( i >= obj.X_STEP*( obj.extents[0] - 1 ) ){
+        if( torus[0] ){
+            r -= obj.extents[0] * obj.X_STEP;
+            add(r, i)
+        } else {
+			result.push(i)
+		}		
+    } else {
+        add(r, i)
+    }
+    // top border
+    if( i % obj.X_STEP === 0 ){
+        if( torus[1] ){
+            t += obj.extents[1];
+            add(t, i)
+        } else {
+			result.push(i)
+		}
+    } else {
+        add(t, i)
+    }
+    // bottom border
+    if( (i+1-obj.extents[1]) % obj.X_STEP === 0 ){
+        if( torus[1] ){
+            b -= obj.extents[1];
+            add(b, i)
+        } else {
+			result.push(i)
+		}
+    } else {
+        add(b, i)
+    }
+
+    return result
+}
+
+
+/** Perform a diffusion step on the grid, updating the values of all pixels
+ * according to Fick's second law of diffusion.
+ * @param {number} D diffusion coefficient
+ * @see https://en.wikipedia.org/wiki/Diffusion#Fick's_law_and_equations
+ * @see https://en.wikipedia.org/wiki/Discrete_Laplace_operator#Mesh_Laplacians
+ * */
+function diffusion( D ) {
+    // For synchronous updating of the grid: compute updated values in a copy
+    // of the current pixels
+    if( ! this._pixelsbuffer ) this.pixelsBuffer();
+    for( let i of this.pixelsi() ){
+        if (borderConstraint.barriervoxels[i]) continue;
+        // Diffusion: new value is current value + change.
+        // the change is given by the diffusion coefficient D times the laplacian.
+        this._pixelsbuffer[i] = this.pixti( i ) + D * this.laplaciani( i );
+    }
+    // swap the copy and the original
+    [this._pixelsbuffer, this._pixels] = [this._pixels, this._pixelsbuffer];
+}
+
+// do not remove unused torus param!
+function neighNeumanni( i, torus ){
+    return neighbourObject[i]
+}
+
+initialize()
