@@ -177,7 +177,7 @@ function postMCSListener(){
 
   // All my friends are dead
   finishCell(this, chemoSpawn)
-  console.log(sumChemokines(this.g))
+  console.log(`CHEMOKINES\t${this.time}\t${sumChemokines(this.g)}`)
 }
 
 function removeChemokines(obj) {
