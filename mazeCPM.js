@@ -44,7 +44,7 @@ let config = {
 		NRCELLS : [1],								// Number of cells to seed for all
 		// non-background cellkinds.
 		// Runtime etc
-		BURNIN : 1,
+		BURNIN : 0,
 		RUNTIME : NUMBER_OF_STEPS,
 		RUNTIME_BROWSER : 100,//"Inf",
 		ACTCOLOR : [true],
