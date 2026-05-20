@@ -6,6 +6,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+DOWN_TIME_BUFFER = 0
+
 def read_results(file_name: str):
     cell_data = []
     kill_data = []
@@ -78,12 +80,13 @@ def down_time(cell_distances):
         down_time = 0
         last_best = cell_distances[i][0]
         for j in range(len(cell_distances[i])):
-            if cell_distances[i][j] > (last_best):
+            if cell_distances[i][j] > (last_best) + DOWN_TIME_BUFFER:
                 down_time+=1
             else :
                 if (cell_distances[i][j] != last_best):
                     print(i, " with ", j, ": ", last_best)
-                last_best = cell_distances[i][j]
+                if (cell_distances[i][j] < last_best):
+                    last_best = cell_distances[i][j]
         down_list.append(down_time)
     return down_list
 
