@@ -68,6 +68,7 @@ let config = {
 
 // Initialize simulation for html
 let sim, meter, borderConstraint
+const walls = createMediumMaze();
 const neighbourObject = {}
 
 function initialize(){
@@ -88,15 +89,13 @@ function initialize(){
     sim.g.neighNeumanni = neighNeumanni
 
 	sim.g2 = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.conf.torus, "Float32")
-    borderConstraint = sim.C.getConstraint("BorderConstraint")
-    initializeNeighbourObject(sim.g)
     sim.g2.diffusion = diffusion
     sim.g2.neighNeumanni = neighNeumanni
-
 
 	// Initial chemokine value for all cells in grid
 	for (let x = 0; x < GRID_WIDTH; x++) {
 		for (let y = 0; y < GRID_HEIGHT; y++) {
+			if (isWallCoordinate(sim.g, [x, y])) continue;
 			sim.g.setpix([x,y], INIT_CHEMOKINE)
 			sim.g2.setpix([x, y], 0);
 		}
@@ -140,9 +139,8 @@ function initializeGrid() {
 		this.addGridManipulator();
 	}
 
-	this.walls = createMediumMaze()
 	this.C.add(new CPM.BorderConstraint({
-		BARRIER_VOXELS: this.walls
+		BARRIER_VOXELS: walls
 	}))
 
 	let nrOfCells = NUMBER_OF_CELLS;
@@ -179,6 +177,7 @@ function postMCSListener(){
 
   // All my friends are dead
   finishCell(this, chemoSpawn)
+  console.log(sumChemokines(this.g))
 }
 
 function removeChemokines(obj) {
@@ -206,12 +205,22 @@ function finishCell(obj,finish){
   }
 }
 
+function sumChemokines(grid) {
+	let sum = 0;
+	for (let x = 0; x < grid.extents[0]; x ++) {
+		for (let y = 0; y < grid.extents[1]; y ++) {
+			sum += grid.pixt([x, y]);
+		}
+	}
+	return sum;
+}
+
 // Draws the pixels in BARRIER_VOXELS
 function drawBelow() {
 	if( !this.helpClasses["canvas"] ){ this.addCanvas() }
 	drawFields(this.Cim, this.g, this.g2)
 	this.Cim.drawCellBorders( -1, "000000" )
-	this.Cim.drawPixelSet(this.walls, "AAAAAA");
+	this.Cim.drawPixelSet(walls, "AAAAAA");
 }
 
 // thanks chatgpt :))
@@ -348,9 +357,20 @@ function inOrder(p1, p2) {
 function initializeNeighbourObject(obj){
     if( ! obj._pixelsbuffer ) obj.pixelsBuffer();
     for( let i of obj.pixelsi() ){
-		if (borderConstraint.barriervoxels[i]) neighbourObject[i] = [];
-        neighbourObject[i] = neighboursi(obj, i, obj.torus)
+		if (isWallIndex(obj, i)) {
+			neighbourObject[i] = []
+		} else {
+	        neighbourObject[i] = neighboursi(obj, i, obj.torus)
+		}
     }
+}
+
+function isWallIndex(grid, i){
+	return walls.some(coord => coord[0] == grid.i2p(i)[0] && coord[1] == grid.i2p(i)[1])
+}
+
+function isWallCoordinate(grid, c){
+	return isWallIndex(grid, grid.p2i(c))
 }
 
 function neighboursi( obj, i, torus ){
@@ -359,7 +379,7 @@ function neighboursi( obj, i, torus ){
     let t = i-1, l = i-obj.X_STEP, r = i+obj.X_STEP, b = i+1;
     
 	function isBorder(j) {
-		return borderConstraint.barriervoxels[j]
+		return isWallIndex(obj, j)
 	}
 
     let result = []
