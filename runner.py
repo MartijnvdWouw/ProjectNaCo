@@ -193,11 +193,11 @@ class Experiment:
             text=True
         )
     
-    def getName(self) -> str:
+    def get_name(self) -> str:
         return self.output_file.name
 
 class Pool:
-    def __init__(self, interval: int = 1):
+    def __init__(self):
         self.experiments: List[Experiment] = []
 
     def add(self, experiment: Experiment) -> None:
@@ -210,7 +210,7 @@ class Pool:
     def await_all(self):
         for e in self.experiments:
             stdout, stderr = e.process.communicate()
-            print(f"{e.getName()} finished{'' if stderr == '' else ' with error ' + stderr}")
+            print(f"{e.get_name()} finished{'' if stderr == '' else ' with error ' + stderr}")
             
             with open(e.output_file, 'w', encoding='utf-8') as f:
                 f.write(stdout)
