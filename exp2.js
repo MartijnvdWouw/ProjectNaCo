@@ -16,10 +16,9 @@ let LAMBDA_CHEMOKINE
 let config
 
 function readConfig() {
-	rel_filepath = process.argv[2]
-	full_path = path.join(__dirname, rel_filepath)
+	file_path = process.argv[2]
 
-	config = JSON.parse(fs.readFileSync(full_path, {encoding: 'utf-8'}))
+	config = JSON.parse(fs.readFileSync(file_path, {encoding: 'utf-8'}))
 }
 
 function setGlobals(){
