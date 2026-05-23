@@ -1,68 +1,38 @@
 let CPM = require("./artistoo-master/build/artistoo-cjs.js");
+let fs = require('fs')
+let path = require('path')
 
 let GRID_WIDTH = 86
 let GRID_HEIGHT = 86
-
-let INIT_CHEMOKINE = 100
-let POOP_FACTOR = 0.7
-let DISSIPATION_FACTOR = 0.99
-
 let NUMBER_OF_CELLS = 20
-let NUMBER_OF_STEPS = 10001
 
-let config = {
-	// Grid settings
-	ndim : 2,
-	field_size : [GRID_WIDTH,GRID_HEIGHT],
-	
-	// CPM parameters and configuration
-	conf : {
-        torus: [false, false],
-        seed: 1,
-        D: 0.15,
-        T : 20,											// CPM temperature
-				
-		// Adhesion parameters:
-		J: [[0,0], [0,0]] ,
-		
-		// VolumeConstraint parameters
-		LAMBDA_V : [0,50],								// VolumeConstraint importance per cellkind
-		V : [0,20],										// Target volume of each cellkind
+//below is read from config file
+let INIT_CHEMOKINE
+let POOP_FACTOR
+let DISSIPATION_FACTOR
+let MAX_EAT
+let NUMBER_OF_STEPS
+let LAMBDA_CHEMOKINE
+let config
 
-		LAMBDA_ACT : [0, 500],
-		MAX_ACT : [0, 100],
-		ACT_MEAN : 'geometric',
+function readConfig() {
+	rel_filepath = process.argv[2]
+	full_path = path.join(__dirname, rel_filepath)
 
-		LAMBDA_P: [0,10],								// PerimeterConstraint importance per cellkind
-		P : [0,50],										// Target perimeter of each cellkind
-	},
-	
-	// Simulation setup and configuration
-	simsettings : {
-		// Cells on the grid
-		NRCELLS : [1],									// Number of cells to seed for all
-		// non-background cellkinds.
-		// Runtime etc
-		BURNIN : 0,
-		RUNTIME : NUMBER_OF_STEPS,
-		RUNTIME_BROWSER : 100,//"Inf",
-		ACTCOLOR : [true],
-		
-		// Visualization
-		zoom : 4,										// zoom in on canvas with this factor.
-		
-		// Output images
-		SAVEIMG : true,									// Should a png image of the grid be saved
-		// during the simulation?
-		IMGFRAMERATE : 1000,							// If so, do this every <IMGFRAMERATE> MCS.
-		SAVEPATH : "img/exp4",							// ... And save the image in this folder.
-		EXPNAME : "Chemotaxis",							// Used for the filename of output images.
-		
-		// Output stats etc
-		STATSOUT : { browser: false, node: true }, 		// Should stats be computed?
-		LOGRATE : 1  									// Output stats every <LOGRATE> MCS.
-	}
+	config = JSON.parse(fs.readFileSync(full_path, {encoding: 'utf-8'}))
 }
+
+function setGlobals(){
+	INIT_CHEMOKINE = config.globals.init_chemokine
+	POOP_FACTOR = config.globals.poop_factor
+	DISSIPATION_FACTOR = config.globals.dissipation_factor
+	MAX_EAT = config.globals.max_eat
+	NUMBER_OF_STEPS = config.simsettings.RUNTIME
+	LAMBDA_CHEMOKINE = config.globals.lambda_chemokine
+}
+
+readConfig()
+setGlobals()
 
 // Initialize simulation for html
 let sim, meter, borderConstraint
@@ -100,12 +70,12 @@ function initialize(){
 	}
 
     sim.C.add( new CPM.ChemotaxisConstraint( {
-        LAMBDA_CH: [0, 100],
+        LAMBDA_CH: LAMBDA_CHEMOKINE[0],
         CH_FIELD : sim.g }
     ) )
 
 	sim.C.add( new CPM.ChemotaxisConstraint( {
-        LAMBDA_CH: [0, 100],
+        LAMBDA_CH: LAMBDA_CHEMOKINE[1],
         CH_FIELD : sim.g2 }
     ) )
 
@@ -182,7 +152,7 @@ function removeChemokines(obj) {
 	for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
 		for (const location of pixels) {
 			const old = obj.g.pixt(location)
-			const eatAmount = Math.min(8, old)
+			const eatAmount = Math.min(MAX_EAT, old)
 			obj.g.setpix(location, old - eatAmount)
 			obj.g2.setpix(location, obj.g2.pixt(location) + eatAmount * POOP_FACTOR)
 		}

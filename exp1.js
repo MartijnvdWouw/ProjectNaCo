@@ -1,70 +1,39 @@
 let CPM = require("./artistoo-master/build/artistoo-cjs.js");
+let fs = require('fs')
+let path = require('path')
 
 let GRID_WIDTH = 86
 let GRID_HEIGHT = 86
+let NUMBER_OF_CELLS = 20
 let FINISH_ZONE = [[39,49],[72,82]]
 
-/*
-let RUPSJENOOITGENOEG = 0.95
-let INIT_CHEMOKINE = 100
-let POOP_FACTOR = 0.7
-let DISSIPATION_FACTOR = 0.99
-*/
+//below is read from config file
+let INIT_CHEMOKINE
+let POOP_FACTOR
+let DISSIPATION_FACTOR
+let MAX_EAT
+let NUMBER_OF_STEPS
+let LAMBDA_CHEMOKINE
+let config
 
-let config = {
-  // Grid settings
-  ndim : 2,
-  field_size : [GRID_WIDTH,GRID_HEIGHT],
-  
-  // CPM parameters and configuration
-  conf : {
-        torus: [false, false],
-        seed: 1,
-        D: 0.15,
-        T : 20,											// CPM temperature
-        
-    // Adhesion parameters:
-    J: [[0,0], [0,0]] ,
-    
-    // VolumeConstraint parameters
-    LAMBDA_V : [0,50],								// VolumeConstraint importance per cellkind
-    V : [0,20],									// Target volume of each cellkind
+function readConfig() {
+  rel_filepath = process.argv[2]
+  full_path = path.join(__dirname, rel_filepath)
 
-    LAMBDA_ACT : [0, 500],
-    MAX_ACT : [0, 100],
-    ACT_MEAN : 'geometric',
-
-    LAMBDA_P: [0,10],								// PerimeterConstraint importance per cellkind
-    P : [0,50],										// Target perimeter of each cellkind
-  },
-  
-  // Simulation setup and configuration
-  simsettings : {
-    // Cells on the grid
-    NRCELLS : [1],								// Number of cells to seed for all
-    // non-background cellkinds.
-    // Runtime etc
-    BURNIN : 1,
-    RUNTIME : 10000,
-    RUNTIME_BROWSER : 100,//"Inf",
-    ACTCOLOR : [true],
-    
-    // Visualization
-    zoom : 4,										// zoom in on canvas with this factor.
-    
-    // Output images
-    SAVEIMG : true,									// Should a png image of the grid be saved
-    // during the simulation?
-    IMGFRAMERATE : 1,								// If so, do this every <IMGFRAMERATE> MCS.
-    SAVEPATH : "img/exp1",				// ... And save the image in this folder.
-    EXPNAME : "Chemotaxis",							// Used for the filename of output images.
-    
-    // Output stats etc
-    STATSOUT : { browser: false, node: true }, 		// Should stats be computed?
-    LOGRATE : 1  									// Output stats every <LOGRATE> MCS.
-
-  }
+  config = JSON.parse(fs.readFileSync(full_path, {encoding: 'utf-8'}))
 }
+
+function setGlobals(){
+  INIT_CHEMOKINE = config.globals.init_chemokine
+  POOP_FACTOR = config.globals.poop_factor
+  DISSIPATION_FACTOR = config.globals.dissipation_factor
+  MAX_EAT = config.globals.max_eat
+  NUMBER_OF_STEPS = config.simsettings.RUNTIME
+  LAMBDA_CHEMOKINE = config.globals.lambda_chemokine
+}
+
+readConfig()
+setGlobals()
 
 // Initialize simulation for html
 let sim, meter, borderConstraint
@@ -77,6 +46,8 @@ function initialize(){
     drawBelow: drawBelow,
   }
 
+  console.log(NUMBER_OF_CELLS)
+	console.log(NUMBER_OF_STEPS)
   
     sim = new CPM.Simulation( config, custommethods )
     sim.g = new CPM.Grid2D([sim.C.extents[0],sim.C.extents[1]], config.conf.torus, "Float32")
@@ -153,7 +124,7 @@ function initializeGrid() {
     BARRIER_VOXELS: this.walls
   }))
 
-  let nrOfCells = 20;
+  let nrOfCells = NUMBER_OF_CELLS;
   for (let x = 18; x <= 33; x+=2) {
     for (let y = 1; y <= 16; y+=2) {
       if (nrOfCells <= 0) {
