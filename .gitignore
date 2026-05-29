@@ -1,5 +1,4 @@
-img
 *.txt
-configs/*
+!results/*/*
 output/mp4/*
 
