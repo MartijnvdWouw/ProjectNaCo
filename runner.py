@@ -22,7 +22,8 @@ class ConfigBuilder:
             'poop_factor': 0.7,
             'dissipation_factor': 0.99,
             'max_eat': 8,
-            'lambda_chemokine': [[0,100], [0,100]]
+            'lambda_chemokine': [[0,100], [0,100]],
+            'chemokine_stop_time': -1,
         },
         'conf' : {
             'torus': [False, False],
@@ -122,6 +123,10 @@ class ConfigBuilder:
     
     def with_max_eat(self, max_eat: int) -> Self:
         self.config['globals']['max_eat'] = max_eat
+        return self
+    
+    def with_chemokine_stop_time(self, time: int) -> Self:
+        self.config['globals']['chemokine_stop_time'] = time
         return self
 
     def with_runtime(self, runtime: int) -> Self:
