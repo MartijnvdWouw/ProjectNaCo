@@ -1,3 +1,5 @@
 img
 *.txt
 configs/*
+output/mp4/*
+

@@ -5,6 +5,7 @@ let path = require('path')
 let GRID_WIDTH = 86
 let GRID_HEIGHT = 86
 let NUMBER_OF_CELLS = 20
+let FINISH_ZONE = [[39,49],[72,82]]
 
 //below is read from config file
 let INIT_CHEMOKINE
@@ -36,6 +37,7 @@ setGlobals()
 // Initialize simulation for html
 let sim, meter, borderConstraint
 const walls = createMediumMaze();
+const finish = createFinish()
 const neighbourObject = {}
 
 function initialize(){
@@ -158,17 +160,15 @@ function removeChemokines(obj) {
 	}
 }
 
-function finishCell(obj,finish){
-  for (const pixels of Object.values(sim.C.getStat( CPM.PixelsByCell )).values()) {
-    for (const location of pixels) {
-      if (location[0] === finish[0] && location[1] === finish[1]){
-          let kill_id = obj.C.pixt(location)
+function finishCell(obj){
+  for (const centroid of Object.values(sim.C.getStat( CPM.Centroids )).values()) {
+      if (centroid[0] > FINISH_ZONE[0][0] && centroid[0] < FINISH_ZONE[0][1] &&
+         centroid[1] > FINISH_ZONE[1][0] && centroid[1] < FINISH_ZONE[1][1]){
+          let kill_id = obj.C.pixt([Math.round(centroid[0]), Math.round(centroid[1])])
           obj.gm.killCell(kill_id)
           console.log(`${obj.time}\t${kill_id}`);
-            
-            //Killed cell ${kill_id} at timestep ${obj.time}`);
+          //Killed cell ${kill_id} at timestep ${obj.time}`);
       }
-    }
   }
 }
 
@@ -188,6 +188,7 @@ function drawBelow() {
 	drawFields(this.Cim, this.g, this.g2)
 	this.Cim.drawCellBorders( -1, "000000" )
 	this.Cim.drawPixelSet(walls, "AAAAAA");
+  this.Cim.drawPixelSet(finish, "00FF00");
 }
 
 // thanks chatgpt :))
@@ -255,6 +256,12 @@ function drawFields(obj, cc, cc2, col = [0, 0, 255], col2 = [255, 0, 0] ){
 	}
 	obj.putImageData();
 	obj.ctx.globalAlpha = 1;
+}
+
+function createFinish() {
+  let finishPixels = []
+  finishPixels = finishPixels.concat(getWallPixels({x: FINISH_ZONE[0][0], y: FINISH_ZONE[1][0]}, {x:FINISH_ZONE[0][1], y:FINISH_ZONE[1][1]}))
+  return finishPixels
 }
 
 // Grid size: 528x100
