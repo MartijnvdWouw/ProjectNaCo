@@ -212,6 +212,7 @@ class Pool:
             stdout, stderr = e.process.communicate()
             print(f"{e.get_name()} finished{'' if stderr == '' else ' with error ' + stderr}")
             
+            e.output_file.parent.mkdir(exist_ok=True, parents=True)
             with open(e.output_file, 'w', encoding='utf-8') as f:
                 f.write(stdout)
 
@@ -223,14 +224,31 @@ class Pool:
 # 3. Add all experiments to a Pool object
 # 4. pool.spawn_all() to start all experiments
 # 5. pool.await_all() to capture all experiment data
+
+def createBlueExp():
+    pool = Pool()
+    for seed in [1, 2, 3]:
+        for eat in [6, 7, 8, 9, 10]:
+            for lambda_ch in [50, 100, 150]:
+                conf = ConfigBuilder().with_seed(seed).with_max_eat(eat).with_lambda_chemokine([[0, lambda_ch]]).with_savepath("img/blue")
+                name = f"blue_s{seed}_e{eat}_l{lambda_ch}"
+                conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
+                experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH)
+                experiment = experiment.with_output_file(Path(f"results/blue/exp_{name}.txt"))
+                pool.add(experiment)
+
+    return pool
  
-baseConf = ConfigBuilder().with_config_name(Path('base_config.json')).build_and_save()
-e2 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
-e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
+# baseConf = ConfigBuilder().with_config_name(Path('base_config.json')).build_and_save()
+# e2 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
+# e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
 
-pool = Pool()
-pool.add(e2)
-pool.add(e4)
+# pool = Pool()
+# pool.add(e2)
+# pool.add(e4)
 
-pool.spawn_all()
-pool.await_all()
+# pool.spawn_all()
+# pool.await_all()
+p = createBlueExp()
+p.spawn_all()
+p.await_all()
