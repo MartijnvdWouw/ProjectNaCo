@@ -11,7 +11,7 @@ class JSExperimentPaths:
 class ConfigBuilder:
     GRID_WIDTH = 86
     GRID_HEIGHT = 86
-    NUMBER_OF_STEPS = 10001
+    NUMBER_OF_STEPS = 3001
 
     BASE_CONFIG=\
     {
@@ -62,7 +62,7 @@ class ConfigBuilder:
             # Output images
             'SAVEIMG' : True,									# Should a png image of the grid be saved
             # during the simulation?
-            'IMGFRAMERATE' : 1000,					        # If so, do this every <IMGFRAMERATE> MCS.
+            'IMGFRAMERATE' : 100,					        # If so, do this every <IMGFRAMERATE> MCS.
             'SAVEPATH' : "img",				                # ... And save the image in this folder.
             'EXPNAME' : "Chemotaxis",							# Used for the filename of output images.
             
