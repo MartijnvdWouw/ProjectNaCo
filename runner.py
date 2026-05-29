@@ -11,7 +11,7 @@ class JSExperimentPaths:
 class ConfigBuilder:
     GRID_WIDTH = 86
     GRID_HEIGHT = 86
-    NUMBER_OF_STEPS = 3001
+    NUMBER_OF_STEPS = 6001
 
     BASE_CONFIG=\
     {
@@ -64,7 +64,7 @@ class ConfigBuilder:
             'SAVEIMG' : True,									# Should a png image of the grid be saved
             # during the simulation?
             'IMGFRAMERATE' : 100,					        # If so, do this every <IMGFRAMERATE> MCS.
-            'SAVEPATH' : "img",				                # ... And save the image in this folder.
+            'SAVEPATH' : "img/base",				# ... And save the image in this folder.
             'EXPNAME' : "Chemotaxis",							# Used for the filename of output images.
             
             # Output stats etc
@@ -265,10 +265,22 @@ def createRedExp():
 # baseConf = ConfigBuilder().with_config_name(Path('base_config.json')).build_and_save()
 # e2 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
 # e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
+ 
+base1Conf = ConfigBuilder().with_config_name(Path('base_config1.json')).with_seed(1).with_savepath("img/base/seed1").with_expname("Base").build_and_save()
+base2Conf = ConfigBuilder().with_config_name(Path('base_config2.json')).with_seed(2).with_savepath("img/base/seed2").with_expname("Base").build_and_save()
+base3Conf = ConfigBuilder().with_config_name(Path('base_config3.json')).with_seed(3).with_savepath("img/base/seed3").with_expname("Base").build_and_save()
+#e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
+#e5 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
 
-# pool = Pool()
-# pool.add(e2)
-# pool.add(e4)
+e1 = Experiment().with_config_path(base1Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('base1.txt'))
+e2 = Experiment().with_config_path(base2Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('base2.txt'))
+e3 = Experiment().with_config_path(base3Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('base3.txt'))
+
+pool = Pool()
+pool.add(e1)
+pool.add(e2)
+pool.add(e3)
+
 
 # pool.spawn_all()
 # pool.await_all()
