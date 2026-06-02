@@ -4,6 +4,7 @@
 # 3. Average time spent 'inefficient' per cell per time step (boxplot)
 
 from pathlib import Path
+from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +18,7 @@ PARAMS_SEED = [1,2,3]
 
 
 def read_all_results(path: Path):
-    return [read_results(p) for p in path.iterdir()]
+    return {p: read_results(p) for p in path.iterdir()}
     # #for e in PARAMS_EAT:
     #  #   for l in PARAMS_LAMBDA:
 
@@ -142,48 +143,66 @@ def avg_distances(number_of_steps: int, cell_distances: list[list[int]], count_k
         current_index += 1
     return avg
 
-def process_avg_kills(results):
-    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = results[0]
+def process_avg_kills(results: Dict[Path, List]):
+    keys = list(results.keys())
+    def data(i):
+        return results[keys[i]]
+
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(0)
     kc = kill_counts(nr_of_steps, kill_data)
     acc = np.array(kc)
     min_kc = kc
     max_kc = kc
+    min_key = keys[0]
+    max_key = keys[0]
     for i in range(1,len(results)):
-        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = results[i]
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(i)
         kc = kill_counts(nr_of_steps, kill_data)
         if (kc[-1] > max_kc[-1]):
             max_kc = kc
+            max_key = keys[i]
         elif (kc[-1] < min_kc[-1]):
             min_kc = kc
+            min_key = keys[i]
+
         acc += (np.array(kc))
     avg = acc / len(results)
     avg_list = avg.tolist()
+    print(f"Kills:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
     plot_kills(avg_list, min_kc, max_kc)
 
-def process_avg_distances(distances, results):
-    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = results[0]
+def process_avg_distances(distances, results: Dict[Path, List]):
+    keys = list(results.keys())
+    def data(i):
+        return results[keys[i]]
+    
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(0)
     avg_d1 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), False)
     avg_d2 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), True)
     acc1 = np.array(avg_d1)
     acc2 = np.array(avg_d2)
     min_d = avg_d2
     max_d = avg_d2
-    
+    min_key = keys[0]
+    max_key = keys[0]
     for i in range(1,len(results)):
-        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = results[i]
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(i)
         avg_d1 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), False)
         avg_d2 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), True)
         acc1 += np.array(avg_d1)
         acc2 += np.array(avg_d2)
         if (avg_d2[-1] < min_d[-1]):
             min_d = avg_d2
+            min_key = keys[i]
         elif (avg_d2[-1] > max_d[-1]):
             max_d = avg_d2
+            max_key = keys[i]
     avg1 = acc1 / len(results)
     avg2 = acc2 / len(results)
     avg_dists1 = avg1.tolist()
     avg_dists2 = avg2.tolist()
     
+    print(f"Distances:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
     plot_dist_finish(avg_dists1, avg_dists2, min_d, max_d)
 
 def plot_dist_finish(avg_dists1, avg_dists2, min, max):
