@@ -16,6 +16,7 @@ PARAMS_EAT = [6,7,8,9,10]
 PARAMS_LAMBDA = [50,100,150]
 PARAMS_SEED = [1,2,3]
 
+GRADIENT_IDENTIFIER = "GRADIENT"
 
 def read_all_results(path: Path):
     return {p: read_results(p) for p in path.iterdir()}
@@ -37,6 +38,8 @@ def read_results(file_name: Path):
     cell_data = []
     kill_data = []
     chemokine_data = []
+    gradient_data: dict[str, list] = {}
+
 
     with open(file_name) as file:
         number_of_cells = int(file.readline())
@@ -47,6 +50,13 @@ def read_results(file_name: Path):
 
             if (len(res) > 0 and res[0] == CHEMOKINE_IDENTIFIER):
                 chemokine_data.append((int(res[1]), float(res[2])))
+            elif (len(res) > 0 and res[0] == GRADIENT_IDENTIFIER):
+                id = res[2]
+                value = float(res[3])
+                if id in gradient_data:
+                    gradient_data[id].append(value)
+                else:
+                    gradient_data[id] = [value]
             elif (len(res) == 5):
                 cell_data.append({
                     "step": int(res[0]),
@@ -57,7 +67,8 @@ def read_results(file_name: Path):
                 })
             elif (len(res) == 2):
                 kill_data.append((int(res[0]), int(res[1])))
-    return number_of_cells, number_of_steps, cell_data, kill_data, chemokine_data
+
+    return number_of_cells, number_of_steps, cell_data, kill_data, chemokine_data, gradient_data
 
 def read_distances(file_name: str): 
     with open(file_name) as file:
@@ -146,7 +157,7 @@ def process_avg_kills(results: Dict[Path, List]):
     def data(i):
         return results[keys[i]]
 
-    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(0)
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data, gradient_data) = data(0)
     kc = kill_counts(nr_of_steps, kill_data)
     acc = np.array(kc)
     min_kc = kc
@@ -154,7 +165,7 @@ def process_avg_kills(results: Dict[Path, List]):
     min_key = keys[0]
     max_key = keys[0]
     for i in range(1,len(results)):
-        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(i)
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data, gradient_data) = data(i)
         kc = kill_counts(nr_of_steps, kill_data)
         if (kc[-1] > max_kc[-1]):
             max_kc = kc
@@ -174,7 +185,7 @@ def process_avg_distances(distances, results: Dict[Path, List]):
     def data(i):
         return results[keys[i]]
     
-    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(0)
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data, gradient_data) = data(0)
     avg_d1 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), False)
     avg_d2 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), True)
     acc1 = np.array(avg_d1)
@@ -184,7 +195,7 @@ def process_avg_distances(distances, results: Dict[Path, List]):
     min_key = keys[0]
     max_key = keys[0]
     for i in range(1,len(results)):
-        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(i)
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data, gradient_data) = data(i)
         avg_d1 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), False)
         avg_d2 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), True)
         acc1 += np.array(avg_d1)
@@ -207,7 +218,7 @@ def process_all_downtimes(distances, results):
     keys = list(results.keys())
     def data(i):
         return results[keys[i]]
-    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(0)
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data, gradient_data) = data(0)
 
     filtered_cell_data = [item for item in cell_data if item['step'] < 3001]
 
@@ -220,7 +231,7 @@ def process_all_downtimes(distances, results):
     min_key = keys[0]
     max_key = keys[0]
     for i in range(1,len(results)):
-        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(i)
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data, gradient_data) = data(i)
         filtered_cell_data = [item for item in cell_data if item['step'] < 3001]
         dists = cell_distances(filtered_cell_data, distances)
         dt = down_time(dists)
@@ -278,7 +289,7 @@ def plot_chemokines(results: Dict[Path, List]):
     def data(i):
         return results[keys[i]]
 
-    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(0)
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data, gradient_data) = data(0)
     if (len(chemokine_data) == 0): return
     acc1 = np.array(chemokine_data)
     min_d = chemokine_data
@@ -286,7 +297,7 @@ def plot_chemokines(results: Dict[Path, List]):
     min_key = keys[0]
     max_key = keys[0]
     for i in range(1,len(results)):
-        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(i)
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data, gradient_data) = data(i)
         acc1 += np.array(chemokine_data)
 
         if (chemokine_data[-1][1] < min_d[-1][1]):
@@ -311,6 +322,17 @@ def plot_chemokines(results: Dict[Path, List]):
     plt.grid(True)
     plt.show()
 
+def plot_gradient(gradient: dict[str, list]):
+    plt.figure(figsize=(10, 5))
+    for k, data in gradient.items():
+        plt.plot(np.arange(len(data)), data, alpha=0.3, linewidth=2, label=f"Experienced Gradient {k}")
+    plt.xlabel("Steps")
+    plt.ylabel("Gradient")
+    plt.title("Experienced Gradient over time")
+    # plt.legend()
+    plt.grid(True)
+    plt.show()
+
 def main():
     #(nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = read_results(, "base1.txt")
     results = read_all_results(Path("results/blue"))
@@ -329,6 +351,11 @@ def main():
 
 
     plot_chemokines(results)
+
+    # first indexing for the experiment, last index for the gradient_data acces (so do not change the -1)
+    # only uncomment when looking at specific experiments
+    # plot_gradient(list(results.values())[0][-1])
+    
     
 
 if __name__=="__main__":
