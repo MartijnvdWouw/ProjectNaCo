@@ -131,8 +131,6 @@ def down_time(cell_distances):
             if cell_distances[i][j] > (last_best) + DOWN_TIME_BUFFER:
                 down_time+=1
             else :
-                if (cell_distances[i][j] != last_best):
-                    print(i, " with ", j, ": ", last_best)
                 if (cell_distances[i][j] < last_best):
                     last_best = cell_distances[i][j]
         down_list.append(down_time)
@@ -222,6 +220,41 @@ def process_avg_distances(distances, results: Dict[Path, List]):
     print(f"Distances:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
     plot_dist_finish(avg_dists1, avg_dists2, min_d, max_d)
 
+def process_all_downtimes(distances, results):
+    keys = list(results.keys())
+    def data(i):
+        return results[keys[i]]
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(0)
+
+    filtered_cell_data = [item for item in cell_data if item['step'] < 3001]
+
+    dists = cell_distances(filtered_cell_data, distances)
+    dt = down_time(dists)
+    avg = sum(dt)/len(dt)
+    avgs = [avg]
+    min_d = dt
+    max_d = dt
+    min_key = keys[0]
+    max_key = keys[0]
+    for i in range(1,len(results)):
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(i)
+        filtered_cell_data = [item for item in cell_data if item['step'] < 3001]
+        dists = cell_distances(filtered_cell_data, distances)
+        dt = down_time(dists)
+        avg = sum(dt)/len(dt)
+        avgs.append(avg)
+        if avg > sum(max_d)/len(max_d):
+            max_d = dt
+            max_key = keys[i]
+        if avg < sum(min_d)/len(min_d):
+            min_d = dt
+            min_key = keys[i]
+    plot_down_time([avgs, min_d, max_d])
+    print(f"Distances:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
+
+
+
+
 def plot_dist_finish(avg_dists1, avg_dists2, min, max):
     plt.figure(figsize=(10, 5))
     plt.plot(np.arange(len(avg_dists2)), avg_dists2, alpha=0.3, linewidth=2, color="yellow", label="Average distance with kills")
@@ -253,7 +286,8 @@ def plot_kills(kill_counts: list[int], min, max):
     plt.show()
 
 def plot_down_time(down_times):
-    plt.boxplot(down_times)
+    names = ["Avg", "Min", "Max"]
+    plt.boxplot(down_times, tick_labels=names)
     plt.show()
 
 def plot_chemokines(results: Dict[Path, List]):
@@ -318,12 +352,9 @@ def main():
     # plot_dist_finish(avg_dists1, avg_dists2)
     process_avg_distances(distances, results)
 
-    #TODO
-    # down_times = down_time(dists)
-    # #print(down_times)
+    # Plot 3
+    process_all_downtimes(distances, results)
 
-    # # Plot 3
-    # plot_down_time(down_times)
 
     plot_chemokines(results)
 
