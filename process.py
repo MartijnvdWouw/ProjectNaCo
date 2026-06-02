@@ -239,10 +239,37 @@ def plot_down_time(down_times):
     plt.boxplot(down_times)
     plt.show()
 
-def plot_chemokines(chemokines):
-    data = [cd[1] for cd in chemokines]
+def plot_chemokines(results: Dict[Path, List]):
+    keys = list(results.keys())
+    def data(i):
+        return results[keys[i]]
+
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(0)
+    if (len(chemokine_data) == 0): return
+    acc1 = np.array(chemokine_data)
+    min_d = chemokine_data
+    max_d = chemokine_data
+    min_key = keys[0]
+    max_key = keys[0]
+    for i in range(1,len(results)):
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = data(i)
+        acc1 += np.array(chemokine_data)
+
+        if (chemokine_data[-1][1] < min_d[-1][1]):
+            min_d = chemokine_data
+            min_key = keys[i]
+        elif (chemokine_data[-1][1] > max_d[-1][1]):
+            max_d = chemokine_data
+            max_key = keys[i]
+    
+    avg1 = [a[1] for a in (acc1 / len(results)).tolist()]
+    
+    print(f"Chemokines:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
+
     plt.figure(figsize=(10, 5))
-    plt.plot(np.arange(len(data)), data, alpha=0.3, linewidth=2, label="Total available chemokines")
+    plt.plot(np.arange(len(avg1)), avg1, alpha=0.3, linewidth=2, label="Total available chemokines")
+    plt.step(np.arange(len(min_d)), [m[1] for m in min_d], where="post", alpha=0.3, linewidth=2, label="Worst case total available chemokines", color= "red")
+    plt.step(np.arange(len(max_d)), [m[1] for m in max_d], where="post", alpha=0.3, linewidth=2, label="Best case total available chemokines", color="green")
     plt.xlabel("Steps")
     plt.ylabel("Total available chemokines")
     plt.title("Total available chemokines in the grid per Monte Carlo step")
@@ -252,7 +279,7 @@ def plot_chemokines(chemokines):
 
 def main():
     #(nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = read_results(, "base1.txt")
-    results = read_all_results(Path("results/base"))
+    results = read_all_results(Path("results/blue"))
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1
@@ -270,7 +297,7 @@ def main():
     # # Plot 3
     # plot_down_time(down_times)
 
-    # plot_chemokines(chemokine_data)
+    plot_chemokines(results)
     
 
 if __name__=="__main__":
