@@ -1,2 +1,4 @@
-img
 *.txt
+!results/*/*
+output/mp4/*
+
