@@ -230,6 +230,20 @@ class Pool:
 # 4. pool.spawn_all() to start all experiments
 # 5. pool.await_all() to capture all experiment data
 
+def createBaseExp():
+    pool = Pool()
+    for seed in [1, 2, 3]:
+        for l_act in [500, 750, 1000]:
+            for m_act in [50, 75, 100, 125, 150]:
+                conf = ConfigBuilder().with_seed(seed).with_lambda_act([0, l_act]).with_max_act([0, m_act]).with_runtime(6001).with_savepath("img/base")
+                name = f"base_s{seed}_la{l_act}_ma{m_act}"
+                conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
+                experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.BASE)
+                experiment = experiment.with_output_file(Path(f"results/base/exp_{name}.txt"))
+                pool.add(experiment)
+
+    return pool
+
 def createBlueExp():
     pool = Pool()
     for seed in [1, 2, 3]:
@@ -263,28 +277,6 @@ def createRedExp():
 
     return pool
 
-# baseConf = ConfigBuilder().with_config_name(Path('base_config.json')).build_and_save()
-# e2 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
-# e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
- 
-base1Conf = ConfigBuilder().with_config_name(Path('base_config1.json')).with_seed(1).with_savepath("img/base").with_expname("Base1").with_runtime(6001).build_and_save()
-base2Conf = ConfigBuilder().with_config_name(Path('base_config2.json')).with_seed(2).with_savepath("img/base").with_expname("Base2").with_runtime(6001).build_and_save()
-base3Conf = ConfigBuilder().with_config_name(Path('base_config3.json')).with_seed(3).with_savepath("img/base").with_expname("Base3").with_runtime(6001).build_and_save()
-#e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
-#e5 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
-
-e1 = Experiment().with_config_path(base1Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('results/base/base1.txt'))
-e2 = Experiment().with_config_path(base2Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('results/base/base2.txt'))
-e3 = Experiment().with_config_path(base3Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('results/base/base3.txt'))
-
-pool = Pool()
-pool.add(e1)
-pool.add(e2)
-pool.add(e3)
-
-
+pool = createBaseExp()
 pool.spawn_all()
 pool.await_all()
-# p = createBlueExp()
-# p.spawn_all()
-# p.await_all()
