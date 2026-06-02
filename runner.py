@@ -22,7 +22,8 @@ class ConfigBuilder:
             'poop_factor': 0.7,
             'dissipation_factor': 0.99,
             'max_eat': 8,
-            'lambda_chemokine': [[0,100], [0,100]]
+            'lambda_chemokine': [[0,100], [0,100]],
+            'chemokine_stop_time': -1,
         },
         'conf' : {
             'torus': [False, False],
@@ -63,7 +64,7 @@ class ConfigBuilder:
             'SAVEIMG' : True,									# Should a png image of the grid be saved
             # during the simulation?
             'IMGFRAMERATE' : 100,					        # If so, do this every <IMGFRAMERATE> MCS.
-            'SAVEPATH' : "img",				                # ... And save the image in this folder.
+            'SAVEPATH' : "img",				# ... And save the image in this folder.
             'EXPNAME' : "Chemotaxis",							# Used for the filename of output images.
             
             # Output stats etc
@@ -122,6 +123,10 @@ class ConfigBuilder:
     
     def with_max_eat(self, max_eat: int) -> Self:
         self.config['globals']['max_eat'] = max_eat
+        return self
+    
+    def with_chemokine_stop_time(self, time: int) -> Self:
+        self.config['globals']['chemokine_stop_time'] = time
         return self
 
     def with_runtime(self, runtime: int) -> Self:
@@ -238,17 +243,48 @@ def createBlueExp():
                 pool.add(experiment)
 
     return pool
- 
+
+
+def createRedExp():
+    pool = Pool()
+    for seed in [1, 2, 3]:
+        for eat in [8]: #ervan uitgaande dat we dit kunnen fixen
+            for lambda_ch in [100]: #ervan uitgaande dat we dit kunnen fixen
+                for prod in [0.2, 0.4, 0.6, 0.8, 1]:
+                    for diss in [0.985, 0.99, 0.995]:
+                        for lambda_ch2 in [50, 100, 150]: # eventueel ook 75 en 125?
+
+                            conf = ConfigBuilder().with_seed(seed).with_max_eat(eat).with_lambda_chemokine([[0, lambda_ch], [0, lambda_ch2]]).with_savepath("img/red")
+                            name = f"red_s{seed}_e{eat}_l{lambda_ch}:{lambda_ch2}_p{prod}_d{diss}"
+                            conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
+                            experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH)
+                            experiment = experiment.with_output_file(Path(f"results/red/exp_{name}.txt"))
+                            pool.add(experiment)
+
+    return pool
+
 # baseConf = ConfigBuilder().with_config_name(Path('base_config.json')).build_and_save()
 # e2 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
 # e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
+ 
+base1Conf = ConfigBuilder().with_config_name(Path('base_config1.json')).with_seed(1).with_savepath("img/base").with_expname("Base1").with_runtime(6001).build_and_save()
+base2Conf = ConfigBuilder().with_config_name(Path('base_config2.json')).with_seed(2).with_savepath("img/base").with_expname("Base2").with_runtime(6001).build_and_save()
+base3Conf = ConfigBuilder().with_config_name(Path('base_config3.json')).with_seed(3).with_savepath("img/base").with_expname("Base3").with_runtime(6001).build_and_save()
+#e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
+#e5 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
 
-# pool = Pool()
-# pool.add(e2)
-# pool.add(e4)
+e1 = Experiment().with_config_path(base1Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('results/base/base1.txt'))
+e2 = Experiment().with_config_path(base2Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('results/base/base2.txt'))
+e3 = Experiment().with_config_path(base3Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('results/base/base3.txt'))
 
-# pool.spawn_all()
-# pool.await_all()
-p = createBlueExp()
-p.spawn_all()
-p.await_all()
+pool = Pool()
+pool.add(e1)
+pool.add(e2)
+pool.add(e3)
+
+
+pool.spawn_all()
+pool.await_all()
+# p = createBlueExp()
+# p.spawn_all()
+# p.await_all()

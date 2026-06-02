@@ -14,6 +14,7 @@ let DISSIPATION_FACTOR
 let MAX_EAT
 let NUMBER_OF_STEPS
 let LAMBDA_CHEMOKINE
+let CHEMOKINE_STOP_TIME
 let config
 
 function readConfig() {
@@ -29,10 +30,17 @@ function setGlobals(){
 	MAX_EAT = config.globals.max_eat
 	NUMBER_OF_STEPS = config.simsettings.RUNTIME
 	LAMBDA_CHEMOKINE = config.globals.lambda_chemokine
+	console.log(config.globals)
+	if (config.globals.chemokine_stop_time === -1) {
+		CHEMOKINE_STOP_TIME = NUMBER_OF_STEPS
+	} else {
+		CHEMOKINE_STOP_TIME = config.globals.chemokine_stop_time
+	}
 }
 
 readConfig()
 setGlobals()
+console.log(CHEMOKINE_STOP_TIME)
 
 // Initialize simulation for html
 let sim, meter, borderConstraint
@@ -132,12 +140,17 @@ function postMCSListener(){
   // Chemokine diffusion 
 	for( let i = 1 ; i <= 10 ; i ++ ){
 		this.g.diffusion( this.C.conf["D"] )
-		this.g2.diffusion(this.C.conf["D"] )
+
+		if (this.time < CHEMOKINE_STOP_TIME) {
+			this.g2.diffusion(this.C.conf["D"] )
+		}
 	}
 
-	for (let i =0; i < this.g2.extents[0]; i ++){
-		for (let j =0; j < this.g2.extents[1]; j ++){
-			this.g2.setpix([i, j], this.g2.pixt([i,j])*DISSIPATION_FACTOR)
+	if (this.time < CHEMOKINE_STOP_TIME) {
+		for (let i =0; i < this.g2.extents[0]; i ++){
+			for (let j =0; j < this.g2.extents[1]; j ++){
+				this.g2.setpix([i, j], this.g2.pixt([i,j])*DISSIPATION_FACTOR)
+			}
 		}
 	}
   
@@ -155,7 +168,15 @@ function removeChemokines(obj) {
 			const old = obj.g.pixt(location)
 			const eatAmount = Math.min(MAX_EAT, old)
 			obj.g.setpix(location, old - eatAmount)
-			obj.g2.setpix(location, obj.g2.pixt(location) + eatAmount * POOP_FACTOR)
+			if (obj.time < CHEMOKINE_STOP_TIME) {
+				obj.g2.setpix(location, obj.g2.pixt(location) + eatAmount * POOP_FACTOR)
+			} else if (obj.time === CHEMOKINE_STOP_TIME) {
+				for (let i =0; i < obj.g2.extents[0]; i ++){
+					for (let j =0; j < obj.g2.extents[1]; j ++){
+						obj.g2.setpix([i, j], 0)
+					}
+				}
+			}
 		}
 	}
 }

@@ -3,13 +3,36 @@
 # 2. Average distance to finish zone of all cells per time step
 # 3. Average time spent 'inefficient' per cell per time step (boxplot)
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 DOWN_TIME_BUFFER = 0
 CHEMOKINE_IDENTIFIER = "CHEMOKINES"
 
-def read_results(file_name: str):
+PARAMS_EAT = [6,7,8,9,10]
+PARAMS_LAMBDA = [50,100,150]
+PARAMS_SEED = [1,2,3]
+
+
+def read_all_results(path: Path):
+    return [read_results(p) for p in path.iterdir()]
+    # #for e in PARAMS_EAT:
+    #  #   for l in PARAMS_LAMBDA:
+
+    # for s in PARAMS_SEED:
+    #     #file_name = file_name + "_" + s + ".txt"      #_{l}_{e}"
+
+    #     file_path = "{}/{}{}.txt".format(path, file_name, s)
+    #     print("reading " + file_path)
+    #     r = read_results(file_path)
+    #     accumulator.append(r)
+    # return accumulator
+    
+
+
+def read_results(file_name: Path):
     cell_data = []
     kill_data = []
     chemokine_data = []
@@ -119,10 +142,57 @@ def avg_distances(number_of_steps: int, cell_distances: list[list[int]], count_k
         current_index += 1
     return avg
 
-def plot_dist_finish(avg_dists1, avg_dists2):
+def process_avg_kills(results):
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = results[0]
+    kc = kill_counts(nr_of_steps, kill_data)
+    acc = np.array(kc)
+    min_kc = kc
+    max_kc = kc
+    for i in range(1,len(results)):
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = results[i]
+        kc = kill_counts(nr_of_steps, kill_data)
+        if (kc[-1] > max_kc[-1]):
+            max_kc = kc
+        elif (kc[-1] < min_kc[-1]):
+            min_kc = kc
+        acc += (np.array(kc))
+    avg = acc / len(results)
+    avg_list = avg.tolist()
+    plot_kills(avg_list, min_kc, max_kc)
+
+def process_avg_distances(distances, results):
+    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = results[0]
+    avg_d1 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), False)
+    avg_d2 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), True)
+    acc1 = np.array(avg_d1)
+    acc2 = np.array(avg_d2)
+    min_d = avg_d2
+    max_d = avg_d2
+    
+    for i in range(1,len(results)):
+        (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = results[i]
+        avg_d1 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), False)
+        avg_d2 = avg_distances(nr_of_steps, cell_distances(cell_data, distances), True)
+        acc1 += np.array(avg_d1)
+        acc2 += np.array(avg_d2)
+        if (avg_d2[-1] < min_d[-1]):
+            min_d = avg_d2
+        elif (avg_d2[-1] > max_d[-1]):
+            max_d = avg_d2
+    avg1 = acc1 / len(results)
+    avg2 = acc2 / len(results)
+    avg_dists1 = avg1.tolist()
+    avg_dists2 = avg2.tolist()
+    
+    plot_dist_finish(avg_dists1, avg_dists2, min_d, max_d)
+
+def plot_dist_finish(avg_dists1, avg_dists2, min, max):
     plt.figure(figsize=(10, 5))
-    plt.plot(np.arange(len(avg_dists2)), avg_dists2, alpha=0.3, linewidth=2, color="red", label="Average distance with kills")
+    plt.plot(np.arange(len(avg_dists2)), avg_dists2, alpha=0.3, linewidth=2, color="yellow", label="Average distance with kills")
     plt.plot(np.arange(len(avg_dists1)), avg_dists1, alpha=0.3, linewidth=2, color="blue", label="Average distance without kills")
+    plt.plot(np.arange(len(min)), min, alpha=0.3, linewidth=2, color="red", label="Min average distance with kills")
+    plt.plot(np.arange(len(max)), max, alpha=0.3, linewidth=2, color="green", label="Max average distance with kills")
+
     plt.xlim(left=0)
     plt.ylim(bottom=0, top=104)
     plt.xlabel("Steps")
@@ -132,9 +202,11 @@ def plot_dist_finish(avg_dists1, avg_dists2):
     plt.grid(True)
     plt.show()
     
-def plot_kills(kill_counts: list[int]):
+def plot_kills(kill_counts: list[int], min, max):
     plt.figure(figsize=(10, 5))
     plt.step(np.arange(len(kill_counts)), kill_counts, where="post", alpha=0.3, linewidth=2, label="Kill count")
+    plt.step(np.arange(len(min)), min, where="post", alpha=0.3, linewidth=2, label="Worst case kill count", color= "red")
+    plt.step(np.arange(len(max)), max, where="post", alpha=0.3, linewidth=2, label="Best case kill count", color="green")
     plt.xlim(left=0)
     plt.ylim(bottom=0, top=20)
     plt.xlabel("Steps")
@@ -160,26 +232,26 @@ def plot_chemokines(chemokines):
     plt.show()
 
 def main():
-    (nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = read_results("exp4.txt")
+    #(nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = read_results(, "base1.txt")
+    results = read_all_results(Path("results/base"))
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1
-    plot_kills(kill_counts(nr_of_steps, kill_data))
-
-    dists = cell_distances(cell_data, distances)
-    avg_dists1 = avg_distances(nr_of_steps, dists, False)
-    avg_dists2 = avg_distances(nr_of_steps, dists, True)
+    #plot_kills(kill_counts(nr_of_steps, kill_data))
+    process_avg_kills(results)
 
     # Plot 2
-    plot_dist_finish(avg_dists1, avg_dists2)
-    
-    down_times = down_time(dists)
-    #print(down_times)
+    # plot_dist_finish(avg_dists1, avg_dists2)
+    process_avg_distances(distances, results)
 
-    # Plot 3
-    plot_down_time(down_times)
+    #TODO
+    # down_times = down_time(dists)
+    # #print(down_times)
 
-    plot_chemokines(chemokine_data)
+    # # Plot 3
+    # plot_down_time(down_times)
+
+    # plot_chemokines(chemokine_data)
     
 
 if __name__=="__main__":
