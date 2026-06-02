@@ -277,6 +277,6 @@ def createRedExp():
 
     return pool
 
-pool = createBaseExp()
+pool = createBlueExp()
 pool.spawn_all()
 pool.await_all()
