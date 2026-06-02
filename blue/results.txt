@@ -1,0 +1,4 @@
+Kills:  	min:    results/blue/exp_blue_s3_e10_l50.txt    max:    results/blue/exp_blue_s3_e9_l100.txt
+Distances:      min:    results/blue/exp_blue_s3_e9_l100.txt    max:    results/blue/exp_blue_s3_e10_l50.txt
+Distances:      min:    results/blue/exp_blue_s3_e9_l100.txt    max:    results/blue/exp_blue_s3_e10_l50.txt
+Chemokines:     min:    results/blue/exp_blue_s3_e10_l100.txt   max:    results/blue/exp_blue_s3_e10_l50.txt

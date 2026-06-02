@@ -251,10 +251,10 @@ def process_all_downtimes(distances, results):
 
 def plot_dist_finish(avg_dists1, avg_dists2, min, max):
     plt.figure(figsize=(10, 5))
-    plt.plot(np.arange(len(avg_dists2)), avg_dists2, alpha=0.3, linewidth=2, color="yellow", label="Average distance with kills")
-    plt.plot(np.arange(len(avg_dists1)), avg_dists1, alpha=0.3, linewidth=2, color="blue", label="Average distance without kills")
-    plt.plot(np.arange(len(min)), min, alpha=0.3, linewidth=2, color="red", label="Min average distance with kills")
-    plt.plot(np.arange(len(max)), max, alpha=0.3, linewidth=2, color="green", label="Max average distance with kills")
+    plt.plot(np.arange(len(avg_dists2)), avg_dists2, alpha=0.3, linewidth=2, color="blue", label="Average distance")
+    #plt.plot(np.arange(len(avg_dists1)), avg_dists1, alpha=0.3, linewidth=2, color="blue", label="Average distance without kills")
+    plt.plot(np.arange(len(min)), min, alpha=0.3, linewidth=2, color="red", label="Min average distance")
+    plt.plot(np.arange(len(max)), max, alpha=0.3, linewidth=2, color="green", label="Max average distance")
 
     plt.xlim(left=0)
     plt.ylim(bottom=0, top=104)
@@ -267,21 +267,23 @@ def plot_dist_finish(avg_dists1, avg_dists2, min, max):
     
 def plot_kills(kill_counts: list[int], min, max):
     plt.figure(figsize=(10, 5))
-    plt.step(np.arange(len(kill_counts)), kill_counts, where="post", alpha=0.3, linewidth=2, label="Kill count")
-    plt.step(np.arange(len(min)), min, where="post", alpha=0.3, linewidth=2, label="Worst case kill count", color= "red")
-    plt.step(np.arange(len(max)), max, where="post", alpha=0.3, linewidth=2, label="Best case kill count", color="green")
+    plt.step(np.arange(len(kill_counts)), kill_counts, where="post", alpha=0.3, linewidth=2, label="Finish count")
+    plt.step(np.arange(len(min)), min, where="post", alpha=0.3, linewidth=2, label="Worst case finish count", color= "red")
+    plt.step(np.arange(len(max)), max, where="post", alpha=0.3, linewidth=2, label="Best case finish count", color="green")
     plt.xlim(left=0)
     plt.ylim(bottom=0, top=20)
     plt.xlabel("Steps")
-    plt.ylabel("Killed cells")
-    plt.title("Number of kills at each Monte Carlo step")
+    plt.ylabel("Finished cells")
+    plt.title("Number of finished cells at each Monte Carlo step")
     plt.legend()
     plt.grid(True)
     plt.show()
 
 def plot_down_time(down_times):
-    names = ["Avg", "Min", "Max"]
+    names = ["Avg (45)", "Min (1)", "Max (1)"]
     plt.boxplot(down_times, tick_labels=names)
+    plt.title("Movement efficiency")
+    plt.grid(True)
     plt.show()
 
 def plot_chemokines(results: Dict[Path, List]):
@@ -325,17 +327,17 @@ def plot_chemokines(results: Dict[Path, List]):
 def plot_gradient(gradient: dict[str, list]):
     plt.figure(figsize=(10, 5))
     for k, data in gradient.items():
-        plt.plot(np.arange(len(data)), data, alpha=0.3, linewidth=2, label=f"Experienced Gradient {k}")
+        plt.plot(np.arange(len(data)), data, alpha=0.3, linewidth=2, label=f"Experienced gradient {k}")
     plt.xlabel("Steps")
     plt.ylabel("Gradient")
-    plt.title("Experienced Gradient over time")
+    plt.title("Experienced gradient over time")
     # plt.legend()
     plt.grid(True)
     plt.show()
 
 def main():
     #(nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = read_results(, "base1.txt")
-    results = read_all_results(Path("results/blue"))
+    results = read_all_results(Path("results/base"))
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1

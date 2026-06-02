@@ -1,4 +1,5 @@
 *.txt
 !results/*/*
+!base/*
+!blue/*
 output/mp4/*
-
