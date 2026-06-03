@@ -337,7 +337,7 @@ def plot_gradient(gradient: dict[str, list]):
     plt.show()
 
 def main():
-    results = read_all_results(Path("results/blue"))
+    results = read_all_results(Path("results/red"))
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1
