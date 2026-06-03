@@ -284,7 +284,7 @@ def plot_down_time(down_times):
     names = ["Avg (45)", "Best (1)", "Worst (1)"]
     plt.boxplot(down_times, tick_labels=names, showmeans=True, meanprops={"marker":"x"})
     plt.title("Movement efficiency")
-    plt.ylabel("Steps")
+    plt.ylabel("Downtime (steps)")
     plt.grid(True)
     plt.show()
 
@@ -337,7 +337,7 @@ def plot_gradient(gradient: dict[str, list]):
     plt.show()
 
 def main():
-    results = read_all_results(Path("results/base"))
+    results = read_all_results(Path("results/blue"))
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1

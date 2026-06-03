@@ -262,7 +262,7 @@ def createBlueExp():
 def createRedExp():
     pool = Pool()
     for seed in [1, 2, 3]:
-        for eat in [8]: #ervan uitgaande dat we dit kunnen fixen
+        for eat in [9]: #ervan uitgaande dat we dit kunnen fixen
             for lambda_ch in [100]: #ervan uitgaande dat we dit kunnen fixen
                 for prod in [0.2, 0.4, 0.6, 0.8, 1]:
                     for diss in [0.985, 0.99, 0.995]:
@@ -277,6 +277,6 @@ def createRedExp():
 
     return pool
 
-pool = createBlueExp()
+pool = createRedExp()
 pool.spawn_all()
 pool.await_all()
