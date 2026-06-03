@@ -253,8 +253,8 @@ def plot_dist_finish(avg_dists1, avg_dists2, min, max):
     plt.figure(figsize=(10, 5))
     plt.plot(np.arange(len(avg_dists2)), avg_dists2, alpha=0.3, linewidth=2, color="blue", label="Average distance")
     #plt.plot(np.arange(len(avg_dists1)), avg_dists1, alpha=0.3, linewidth=2, color="blue", label="Average distance without kills")
-    plt.plot(np.arange(len(min)), min, alpha=0.3, linewidth=2, color="red", label="Min average distance")
-    plt.plot(np.arange(len(max)), max, alpha=0.3, linewidth=2, color="green", label="Max average distance")
+    plt.plot(np.arange(len(min)), min, alpha=0.3, linewidth=2, color="green", label="Best average distance")
+    plt.plot(np.arange(len(max)), max, alpha=0.3, linewidth=2, color="red", label="Worst average distance")
 
     plt.xlim(left=0)
     plt.ylim(bottom=0, top=104)
@@ -280,9 +280,10 @@ def plot_kills(kill_counts: list[int], min, max):
     plt.show()
 
 def plot_down_time(down_times):
-    names = ["Avg (45)", "Min (1)", "Max (1)"]
+    names = ["Avg (45)", "Best (1)", "Worst (1)"]
     plt.boxplot(down_times, tick_labels=names)
     plt.title("Movement efficiency")
+    plt.ylabel("Steps")
     plt.grid(True)
     plt.show()
 
@@ -314,12 +315,12 @@ def plot_chemokines(results: Dict[Path, List]):
     print(f"Chemokines:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
 
     plt.figure(figsize=(10, 5))
-    plt.plot(np.arange(len(avg1)), avg1, alpha=0.3, linewidth=2, label="Total available chemokines")
-    plt.step(np.arange(len(min_d)), [m[1] for m in min_d], where="post", alpha=0.3, linewidth=2, label="Worst case total available chemokines", color= "red")
-    plt.step(np.arange(len(max_d)), [m[1] for m in max_d], where="post", alpha=0.3, linewidth=2, label="Best case total available chemokines", color="green")
+    plt.plot(np.arange(len(avg1)), avg1, alpha=0.3, linewidth=2, label="Average total available chemokines")
+    plt.step(np.arange(len(min_d)), [m[1] for m in min_d], where="post", alpha=0.3, linewidth=2, label="Minimal total available chemokines", color= "red")
+    plt.step(np.arange(len(max_d)), [m[1] for m in max_d], where="post", alpha=0.3, linewidth=2, label="Maximal total available chemokines", color="green")
     plt.xlabel("Steps")
-    plt.ylabel("Total available chemokines")
-    plt.title("Total available chemokines in the grid per Monte Carlo step")
+    plt.ylabel("Number of chemokines")
+    plt.title("Average total chemokines in the grid per Monte Carlo step")
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -331,27 +332,23 @@ def plot_gradient(gradient: dict[str, list]):
     plt.xlabel("Steps")
     plt.ylabel("Gradient")
     plt.title("Experienced gradient over time")
-    # plt.legend()
     plt.grid(True)
     plt.show()
 
 def main():
-    #(nr_of_cells, nr_of_steps, cell_data, kill_data, chemokine_data) = read_results(, "base1.txt")
     results = read_all_results(Path("results/base"))
     distances = read_distances("mediumMaze.txt")
 
     # Plot 1
-    #plot_kills(kill_counts(nr_of_steps, kill_data))
     process_avg_kills(results)
 
     # Plot 2
-    # plot_dist_finish(avg_dists1, avg_dists2)
     process_avg_distances(distances, results)
 
     # Plot 3
     process_all_downtimes(distances, results)
 
-
+    # Plot 4
     plot_chemokines(results)
 
     # first indexing for the experiment, last index for the gradient_data acces (so do not change the -1)
@@ -359,6 +356,5 @@ def main():
     # plot_gradient(list(results.values())[0][-1])
     
     
-
 if __name__=="__main__":
     main()
