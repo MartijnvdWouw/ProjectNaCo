@@ -225,6 +225,7 @@ def process_all_downtimes(distances, results):
     dists = cell_distances(filtered_cell_data, distances)
     dt = down_time(dists)
     avg = sum(dt)/len(dt)
+    print(avg)
     avgs = [avg]
     min_d = dt
     max_d = dt
@@ -281,7 +282,7 @@ def plot_kills(kill_counts: list[int], min, max):
 
 def plot_down_time(down_times):
     names = ["Avg (45)", "Best (1)", "Worst (1)"]
-    plt.boxplot(down_times, tick_labels=names)
+    plt.boxplot(down_times, tick_labels=names, showmeans=True, meanprops={"marker":"x"})
     plt.title("Movement efficiency")
     plt.ylabel("Steps")
     plt.grid(True)
