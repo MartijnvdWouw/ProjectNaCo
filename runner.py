@@ -262,14 +262,14 @@ def createBlueExp():
 def createRedExp():
     pool = Pool()
     for seed in [1, 2, 3]:
-        for eat in [9]: #ervan uitgaande dat we dit kunnen fixen
+        for eat in [7]: #ervan uitgaande dat we dit kunnen fixen
             for lambda_ch in [100]: #ervan uitgaande dat we dit kunnen fixen
                 for prod in [0.2, 0.4, 0.6, 0.8, 1]:
                     for diss in [0.985, 0.99, 0.995]:
                         for lambda_ch2 in [50, 100, 150]: # eventueel ook 75 en 125?
 
                             conf = ConfigBuilder().with_seed(seed).with_max_eat(eat).with_lambda_chemokine([[0, lambda_ch], [0, lambda_ch2]]).with_savepath("img/red")
-                            name = f"red_s{seed}_e{eat}_l{lambda_ch}:{lambda_ch2}_p{prod}_d{diss}"
+                            name = f"red_s{seed}_e{eat}_l{lambda_ch}_{lambda_ch2}_p{prod}_d{diss}"
                             conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
                             experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH)
                             experiment = experiment.with_output_file(Path(f"results/red/exp_{name}.txt"))
