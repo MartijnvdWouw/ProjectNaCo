@@ -8,6 +8,8 @@ from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
+import re
+from collections import defaultdict
 
 DOWN_TIME_BUFFER = 0
 CHEMOKINE_IDENTIFIER = "CHEMOKINES"
@@ -32,6 +34,19 @@ def read_all_results(path: Path):
     #     accumulator.append(r)
     # return accumulator
     
+def group(path: Path):
+    seed_re = re.compile(r"_s\d+")
+
+    groups = defaultdict(list)
+
+    for p in path.iterdir():
+        key = seed_re.sub("_s", p.name)
+        groups[key].append(p)
+
+    return groups
+
+def read_all_results_collection(paths: List[Path]):
+    return {p: read_results(p) for p in paths}
 
 
 def read_results(file_name: Path):
@@ -177,7 +192,7 @@ def process_avg_kills(results: Dict[Path, List]):
         acc += (np.array(kc))
     avg = acc / len(results)
     avg_list = avg.tolist()
-    print(f"Kills:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
+    print(f"Kills:\t\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}\tamounts: {min_kc[-1]}\t{avg[-1]}\t{max_kc[-1]}")
     plot_kills(avg_list, min_kc, max_kc)
 
 def process_avg_distances(distances, results: Dict[Path, List]):
@@ -211,7 +226,7 @@ def process_avg_distances(distances, results: Dict[Path, List]):
     avg_dists1 = avg1.tolist()
     avg_dists2 = avg2.tolist()
     
-    print(f"Distances:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
+    print(f"Distances:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}\tamounts: {min_d[-1]}\t{avg2[-1]}\t{max_d[-1]}")
     plot_dist_finish(avg_dists1, avg_dists2, min_d, max_d)
 
 def process_all_downtimes(distances, results):
@@ -225,7 +240,7 @@ def process_all_downtimes(distances, results):
     dists = cell_distances(filtered_cell_data, distances)
     dt = down_time(dists)
     avg = sum(dt)/len(dt)
-    print(avg)
+    # print(avg)
     avgs = [avg]
     min_d = dt
     max_d = dt
@@ -244,11 +259,8 @@ def process_all_downtimes(distances, results):
         if avg < sum(min_d)/len(min_d):
             min_d = dt
             min_key = keys[i]
+    print(f"Downtimes:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}\tamounts: {min_d[-1]}\t{avg}\t{min_d[-1]}")
     plot_down_time([avgs, min_d, max_d])
-    print(f"Distances:\tmin:\t{str(min_key)}\tmax:\t{str(max_key)}")
-
-
-
 
 def plot_dist_finish(avg_dists1, avg_dists2, min, max):
     plt.figure(figsize=(10, 5))
@@ -340,6 +352,11 @@ def main():
     results = read_all_results(Path("results/red"))
     distances = read_distances("mediumMaze.txt")
 
+    # x = group(Path("results/blue"))
+    # for k,v in x.items():
+    #     print("\n", k)
+    #     results = read_all_results_collection(v)
+
     # Plot 1
     process_avg_kills(results)
 
@@ -350,12 +367,12 @@ def main():
     process_all_downtimes(distances, results)
 
     # Plot 4
-    plot_chemokines(results)
+    # plot_chemokines(results)
 
-    # first indexing for the experiment, last index for the gradient_data acces (so do not change the -1)
-    # only uncomment when looking at specific experiments
-    # plot_gradient(list(results.values())[0][-1])
-    
+        # first indexing for the experiment, last index for the gradient_data acces (so do not change the -1)
+        # only uncomment when looking at specific experiments
+        # plot_gradient(list(results.values())[0][-1])
+        
     
 if __name__=="__main__":
     main()
