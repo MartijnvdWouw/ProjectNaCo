@@ -3,3 +3,4 @@
 !base/*
 !blue/*
 output/mp4/*
+!requirements.txt

@@ -278,6 +278,7 @@ def createRedExp():
 
     return pool
 
+# Remove below to define own experiments
 pool = createRedExp()
 pool.spawn_all()
 pool.await_all()
