@@ -400,22 +400,21 @@ def plot_gradient(gradient: dict[str, list]):
     plt.show()
 
 def main():
-    # results = read_all_results(Path("results/blue"))
     distances = read_distances("mediumMaze.txt")
 
     r = read_all_results_group(group(Path("results/red")))
     
     # Plot 1
-    # process_avg_kills(r)
+    process_avg_kills(r)
 
     # Plot 2
-    # process_avg_distances(distances, r)
+    process_avg_distances(distances, r)
     
     # Plot 3    
     process_all_downtimes(distances, r)
 
     # Plot 4
-    # process_chemokines(r)
+    process_chemokines(r)
 
     # set key to the key of the group you want to inquire
     # second index is the seed
