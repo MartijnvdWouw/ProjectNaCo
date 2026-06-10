@@ -113,11 +113,11 @@ class ConfigBuilder:
         self.config['globals']['init_chemokine'] = init_chemokine
         return self
     
-    def with_poop_factor(self, poop_factor: int) -> Self:
+    def with_poop_factor(self, poop_factor: float) -> Self:
         self.config['globals']['poop_factor'] = poop_factor
         return self
     
-    def with_dissipation_factor(self, dissipation_factor: int) -> Self:
+    def with_dissipation_factor(self, dissipation_factor: float) -> Self:
         self.config['globals']['dissipation_factor'] = dissipation_factor
         return self
     
@@ -268,11 +268,12 @@ def createRedExp():
                     for diss in [0.985, 0.99, 0.995]:
                         for lambda_ch2 in [50, 100, 150]: # eventueel ook 75 en 125?
 
-                            conf = ConfigBuilder().with_seed(seed).with_max_eat(eat).with_lambda_chemokine([[0, lambda_ch], [0, lambda_ch2]]).with_savepath("img/red")
-                            name = f"red_s{seed}_e{eat}_l{lambda_ch}_{lambda_ch2}_p{prod}_d{diss}"
+                            conf = ConfigBuilder().with_seed(seed).with_max_eat(eat).with_lambda_chemokine([[0, lambda_ch], [0, lambda_ch2]])
+                            conf = conf.with_dissipation_factor(diss).with_poop_factor(prod).with_savepath("img/red2")
+                            name = f"red2_s{seed}_e{eat}_l{lambda_ch}_{lambda_ch2}_p{prod}_d{diss}"
                             conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
                             experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH)
-                            experiment = experiment.with_output_file(Path(f"results/red/exp_{name}.txt"))
+                            experiment = experiment.with_output_file(Path(f"results/red2/exp_{name}.txt"))
                             pool.add(experiment)
 
     return pool
