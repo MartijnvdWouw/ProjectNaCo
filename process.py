@@ -328,7 +328,7 @@ def plot_kills(kill_counts: list[int], min, max):
 
 def plot_down_time(down_times):
     names = ["Avg (45)", "Best (1)", "Worst (1)"]
-    plt.boxplot(down_times,  showmeans=True, meanprops={"marker":"x"})
+    plt.boxplot(down_times,  tick_labels=names, showmeans=True, meanprops={"marker":"x"})
     plt.title("Movement efficiency")
     plt.ylabel("Downtime (% of steps)")
     plt.grid(True)
@@ -403,19 +403,19 @@ def main():
     # results = read_all_results(Path("results/blue"))
     distances = read_distances("mediumMaze.txt")
 
-    r = read_all_results_group(group(Path("results/blue")))
+    r = read_all_results_group(group(Path("results/red")))
     
     # Plot 1
-    process_avg_kills(r)
+    # process_avg_kills(r)
 
     # Plot 2
-    process_avg_distances(distances, r)
+    # process_avg_distances(distances, r)
     
     # Plot 3    
     process_all_downtimes(distances, r)
 
     # Plot 4
-    process_chemokines(r)
+    # process_chemokines(r)
 
     # set key to the key of the group you want to inquire
     # second index is the seed
