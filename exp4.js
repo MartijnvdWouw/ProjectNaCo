@@ -30,7 +30,6 @@ function setGlobals(){
 	MAX_EAT = config.globals.max_eat
 	NUMBER_OF_STEPS = config.simsettings.RUNTIME
 	LAMBDA_CHEMOKINE = config.globals.lambda_chemokine
-	console.log(config.globals)
 	if (config.globals.chemokine_stop_time === -1) {
 		CHEMOKINE_STOP_TIME = NUMBER_OF_STEPS
 	} else {
@@ -40,7 +39,6 @@ function setGlobals(){
 
 readConfig()
 setGlobals()
-console.log(CHEMOKINE_STOP_TIME)
 
 // Initialize simulation for html
 let sim, meter, borderConstraint
@@ -153,13 +151,16 @@ function postMCSListener(){
 			}
 		}
 	}
-  
-  // This is where he eats
-  removeChemokines(this)
 
-  // All my friends are dead
-  finishCell(this, chemoSpawn)
-  console.log(`CHEMOKINES\t${this.time}\t${sumChemokines(this.g)}`)
+	// This is where he eats
+	removeChemokines(this)
+
+	// All my friends are dead
+	finishCell(this, chemoSpawn)
+	console.log(`CHEMOKINES\t${this.time}\t${sumChemokines(this.g)}`)
+  	for (const [k, v] of Object.entries(computeGradientsPerCell(this))) {
+		console.log(`GRADIENT\t${this.time}\t${k}\t${v}`)
+	}
 }
 
 function removeChemokines(obj) {
@@ -179,6 +180,29 @@ function removeChemokines(obj) {
 			}
 		}
 	}
+}
+
+function computeGradientsPerCell(obj) {
+	const pixelsPerCell = obj.C.getStat(CPM.PixelsByCell )
+	const gradientPerCell = {}
+
+	for (const [k, v] of Object.entries(pixelsPerCell)) {
+		let sum = 0
+		let count = 0
+		for (const [x, y] of v) {
+			const index = obj.g.p2i([x,y])
+			const neighbours = neighbourObject[index] //left, right, top, bottom
+
+			if (neighbours.length === 0) continue;
+
+			const gx = (obj.g.pixti(neighbours[1]) - obj.g.pixti(neighbours[0])) * 0.5
+			const gy = (obj.g.pixti(neighbours[3]) - obj.g.pixti(neighbours[2])) * 0.5
+			sum += Math.hypot(gx, gy)
+			count ++
+		}
+		gradientPerCell[k] = count > 0 ? sum/count : 0;
+	}
+	return gradientPerCell
 }
 
 function finishCell(obj){

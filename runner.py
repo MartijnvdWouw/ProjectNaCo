@@ -11,7 +11,7 @@ class JSExperimentPaths:
 class ConfigBuilder:
     GRID_WIDTH = 86
     GRID_HEIGHT = 86
-    NUMBER_OF_STEPS = 6001
+    NUMBER_OF_STEPS = 3001
 
     BASE_CONFIG=\
     {
@@ -64,7 +64,7 @@ class ConfigBuilder:
             'SAVEIMG' : True,									# Should a png image of the grid be saved
             # during the simulation?
             'IMGFRAMERATE' : 100,					        # If so, do this every <IMGFRAMERATE> MCS.
-            'SAVEPATH' : "img/base",				# ... And save the image in this folder.
+            'SAVEPATH' : "img",				# ... And save the image in this folder.
             'EXPNAME' : "Chemotaxis",							# Used for the filename of output images.
             
             # Output stats etc
@@ -113,11 +113,11 @@ class ConfigBuilder:
         self.config['globals']['init_chemokine'] = init_chemokine
         return self
     
-    def with_poop_factor(self, poop_factor: int) -> Self:
+    def with_poop_factor(self, poop_factor: float) -> Self:
         self.config['globals']['poop_factor'] = poop_factor
         return self
     
-    def with_dissipation_factor(self, dissipation_factor: int) -> Self:
+    def with_dissipation_factor(self, dissipation_factor: float) -> Self:
         self.config['globals']['dissipation_factor'] = dissipation_factor
         return self
     
@@ -230,6 +230,20 @@ class Pool:
 # 4. pool.spawn_all() to start all experiments
 # 5. pool.await_all() to capture all experiment data
 
+def createBaseExp():
+    pool = Pool()
+    for seed in [1, 2, 3]:
+        for l_act in [500, 750, 1000]:
+            for m_act in [50, 75, 100, 125, 150]:
+                conf = ConfigBuilder().with_seed(seed).with_lambda_act([0, l_act]).with_max_act([0, m_act]).with_runtime(6001).with_savepath("img/base")
+                name = f"base_s{seed}_la{l_act}_ma{m_act}"
+                conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
+                experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.BASE)
+                experiment = experiment.with_output_file(Path(f"results/base/exp_{name}.txt"))
+                pool.add(experiment)
+
+    return pool
+
 def createBlueExp():
     pool = Pool()
     for seed in [1, 2, 3]:
@@ -244,17 +258,19 @@ def createBlueExp():
 
     return pool
 
+
 def createRedExp():
     pool = Pool()
     for seed in [1, 2, 3]:
-        for eat in [8]: #ervan uitgaande dat we dit kunnen fixen
+        for eat in [7]: #ervan uitgaande dat we dit kunnen fixen
             for lambda_ch in [100]: #ervan uitgaande dat we dit kunnen fixen
                 for prod in [0.2, 0.4, 0.6, 0.8, 1]:
                     for diss in [0.985, 0.99, 0.995]:
                         for lambda_ch2 in [50, 100, 150]: # eventueel ook 75 en 125?
 
-                            conf = ConfigBuilder().with_seed(seed).with_max_eat(eat).with_lambda_chemokine([[0, lambda_ch], [0, lambda_ch2]]).with_savepath("img/red")
-                            name = f"red_s{seed}_e{eat}_l{lambda_ch}:{lambda_ch2}_p{prod}_d{diss}"
+                            conf = ConfigBuilder().with_seed(seed).with_max_eat(eat).with_lambda_chemokine([[0, lambda_ch], [0, lambda_ch2]])
+                            conf = conf.with_dissipation_factor(diss).with_poop_factor(prod).with_savepath("img/red")
+                            name = f"red_s{seed}_e{eat}_l{lambda_ch}_{lambda_ch2}_p{prod}_d{diss}"
                             conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
                             experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH)
                             experiment = experiment.with_output_file(Path(f"results/red/exp_{name}.txt"))
@@ -262,28 +278,7 @@ def createRedExp():
 
     return pool
 
-# baseConf = ConfigBuilder().with_config_name(Path('base_config.json')).build_and_save()
-# e2 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
-# e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
- 
-base1Conf = ConfigBuilder().with_config_name(Path('base_config1.json')).with_seed(1).with_savepath("img/base/seed1").with_expname("Base").build_and_save()
-base2Conf = ConfigBuilder().with_config_name(Path('base_config2.json')).with_seed(2).with_savepath("img/base/seed2").with_expname("Base").build_and_save()
-base3Conf = ConfigBuilder().with_config_name(Path('base_config3.json')).with_seed(3).with_savepath("img/base/seed3").with_expname("Base").build_and_save()
-#e4 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH).with_output_file(Path('aa.txt'))
-#e5 = Experiment().with_config_path(baseConf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH).with_output_file(Path('aa2.txt'))
-
-e1 = Experiment().with_config_path(base1Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('base1.txt'))
-e2 = Experiment().with_config_path(base2Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('base2.txt'))
-e3 = Experiment().with_config_path(base3Conf.get_full_path()).with_js_path(JSExperimentPaths.BASE).with_output_file(Path('base3.txt'))
-
-pool = Pool()
-pool.add(e1)
-pool.add(e2)
-pool.add(e3)
-
-
-# pool.spawn_all()
-# pool.await_all()
-# p = createBlueExp()
-# p.spawn_all()
-# p.await_all()
+# Remove below to define own experiments
+pool = createRedExp()
+pool.spawn_all()
+pool.await_all()
