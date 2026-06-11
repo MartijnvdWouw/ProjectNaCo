@@ -331,6 +331,7 @@ def plot_down_time(down_times):
     plt.boxplot(down_times,  tick_labels=names, showmeans=True, meanprops={"marker":"x"})
     plt.title("Movement efficiency")
     plt.ylabel("Downtime (% of steps)")
+    plt.ylim(bottom=0, top=100)
     plt.grid(True)
     plt.show()
 
