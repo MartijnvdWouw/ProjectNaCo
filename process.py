@@ -327,7 +327,7 @@ def plot_kills(kill_counts: list[int], min, max):
     plt.show()
 
 def plot_down_time(down_times):
-    names = ["Avg (45)", "Best (1)", "Worst (1)"]
+    names = ["Avg (15)", "Best (1)", "Worst (1)"]
     plt.boxplot(down_times,  tick_labels=names, showmeans=True, meanprops={"marker":"x"})
     plt.title("Movement efficiency")
     plt.ylabel("Downtime (% of steps)")
@@ -403,7 +403,7 @@ def plot_gradient(gradient: dict[str, list]):
 def main():
     distances = read_distances("mediumMaze.txt")
 
-    r = read_all_results_group(group(Path("results/red")))
+    r = read_all_results_group(group(Path("results/base")))
     
     # Plot 1
     process_avg_kills(r)
