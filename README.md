@@ -90,7 +90,7 @@ Make sure that it points to the results folder obtained while running your exper
 4. [force](./img/force/) for the images of the chemotaxis runs with increased force
 5. [split](./img/split/) for the images of the runs where after time t, paracrine signalling was disabled
 
-For all of the above: the file name denotes what the configuration settings where.
+For all of the above: the file name denotes what configuration settings were used.
 
 ## Output files
 1. [baseline](./results/base/) for the outputs of all baseline runs
@@ -99,7 +99,7 @@ For all of the above: the file name denotes what the configuration settings wher
 4. [force](./results/force/) for the outputs of the chemotaxis runs with increased force
 5. [split](./results/split/) for the outputs of the runs where after time t, paracrine signalling was disabled
 
-For all of the above: the file name denotes what the configuration settings where used.
+For all of the above: the file name denotes what configuration settings were used.
 
 ## Configurations
 see [configs](./configs/) for all used configurations.
