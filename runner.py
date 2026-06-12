@@ -278,7 +278,7 @@ def createRedExp():
 
     return pool
 
-def createSpecificExp():
+def createSplitExp():
     pool = Pool()
 
     stop_time = 900
@@ -289,27 +289,27 @@ def createSpecificExp():
     
     name = f"spec_s{seed}_e7_l100_{lambda_ch2}_p{prod}_d{diss}"
     conf = ConfigBuilder().with_seed(seed).with_max_eat(7).with_lambda_chemokine([[0, 100], [0, lambda_ch2]])
-    conf = conf.with_dissipation_factor(diss).with_poop_factor(prod).with_savepath("img/spec")
-    conf = conf.with_savepath("img/spec").with_chemokine_stop_time(stop_time)
+    conf = conf.with_dissipation_factor(diss).with_poop_factor(prod).with_savepath("img/split")
+    conf = conf.with_savepath("img/split").with_chemokine_stop_time(stop_time)
     conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
     experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.DOUBLE_CH)
-    experiment = experiment.with_output_file(Path(f"results/spec/exp_{name}.txt"))
+    experiment = experiment.with_output_file(Path(f"results/split/exp_{name}.txt"))
     pool.add(experiment)
         
     return pool
 
-def createSomeExp():
+def createForceExp():
     pool = Pool()
     for seed in [1,2,3]:
-        conf = ConfigBuilder().with_seed(seed).with_max_eat(7).with_lambda_chemokine([[0, 250]]).with_savepath("img/some")
+        conf = ConfigBuilder().with_seed(seed).with_max_eat(7).with_lambda_chemokine([[0, 250]]).with_savepath("img/force")
         name = f"some_s{seed}_e7_l250"
         conf = conf.with_config_name(Path(f"conf_{name}.json")).with_expname(name).build_and_save()
         experiment = Experiment().with_config_path(conf.get_full_path()).with_js_path(JSExperimentPaths.SINGLE_CH)
-        experiment = experiment.with_output_file(Path(f"results/some/exp_{name}.txt"))
+        experiment = experiment.with_output_file(Path(f"results/force/exp_{name}.txt"))
         pool.add(experiment)
     return pool
 
 # Remove below to define own experiments
-pool = createSomeExp()
+pool = createRedExp()
 pool.spawn_all()
 pool.await_all()

@@ -8,7 +8,7 @@ This project uses the artistoo implementation as provided in this repository. To
 
 Furthermore we use the latest version of python (which can be found [here](https://www.python.org/downloads/release/python-3146/)).
 
-Assuming that the `python` is bound to version 3.14 (you can check this with `python -V`) do the following (from the root of the project!) to install all dependencies: 
+Assuming that the `python` command is bound to version 3.14 (you can check this with `python -V`) do the following (from the root of the project!) to install all dependencies: 
 
 1. create a virtual environment: `python -m venv venv`
 2. activate the environment: `./venv\Scripts\Activate.ps1` for windows or `source venv/bin/activate` for unix.
@@ -22,6 +22,8 @@ To run our experiments, go to `runner.py` and at the bottom change `pool = creat
 1. `pool = createBaseExp()` for our baseline experiments
 2. `pool = createBlueExp()` for our chemotaxis experiments
 3. leave unchanged (`pool = createRedExp()`) for our paracrine signalling experiments
+4. `pool = createForceExp()` for our experiments with extra force in the chemotaxis model
+5. `pool = createSplitExp()` for one of our experiments with no paracrine signalling after time t. (note that you can change this function for the other experiments).
 
 note that these experiments can take a while.
 
@@ -76,6 +78,8 @@ Make sure that it points to the results folder obtained while running your exper
 1. `r = read_all_results_group(group(Path("results/base")))` will analyse the baseline
 2. `r = read_all_results_group(group(Path("results/blue")))` (leave unchanged) will analyse the chemotaxis model
 3. `r = read_all_results_group(group(Path("results/red")))` will analyse the paracrine signalling model.
+4. `r = read_all_results_group(group(Path("results/force")))` will analyse the chemotaxis experiments with extra force.
+5. Note that for the experiments where paracrine signalling is disabled after some time t, analysis was done based on [these](./img/split/) images
 
 # Navigation to our results
 
@@ -83,6 +87,8 @@ Make sure that it points to the results folder obtained while running your exper
 1. [baseline](./img/base/) for the images of all baseline runs
 2. [chemotaxis](./img/blue/) for the images of all chemotaxis runs
 3. [paracrine signalling](./img/red/) for the images of all paracrine signalling runs
+4. [force](./img/force/) for the images of the chemotaxis runs with increased force
+5. [split](./img/split/) for the images of the runs where after time t, paracrine signalling was disabled
 
 For all of the above: the file name denotes what the configuration settings where.
 
@@ -90,8 +96,10 @@ For all of the above: the file name denotes what the configuration settings wher
 1. [baseline](./results/base/) for the outputs of all baseline runs
 2. [chemotaxis](./results/blue/) for the outputs of all chemotaxis runs
 3. [paracrine signalling](./results/red/) for the outputs of all paracrine signalling runs
+4. [force](./results/force/) for the outputs of the chemotaxis runs with increased force
+5. [split](./results/split/) for the outputs of the runs where after time t, paracrine signalling was disabled
 
-For all of the above: the file name denotes what the configuration settings where.
+For all of the above: the file name denotes what the configuration settings where used.
 
 ## Configurations
 see [configs](./configs/) for all used configurations.
@@ -105,4 +113,4 @@ If you are interested in the javascript implementations:
 
 Note that these files can not be run individually without passing the path to a configuration manually!
 
-for example: `node ./exp1.js "./configs/config.json"` if there is a config located at `./configs/config.json`.
+for example: `node ./exp1.js "./configs/config.json"` if there is a config located at `./configs/config.json` should work, but it is best to use `runner.py`.
